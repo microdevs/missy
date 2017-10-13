@@ -4,10 +4,6 @@
 
 MISSY is a library for creating REST services that talk to each other. It provides the following functionality
 
-### Setup our git to use a private go lib
-- git config --global url."git@github.com:".insteadOf "https://github.com/"
-
-
 ### Features
 
 * Routing with gorrila/mux
