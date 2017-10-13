@@ -6,4 +6,8 @@ before_install:
 
 script:
   - go test -v -covermode=count -coverprofile=coverage.out
-  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+  - "$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN"
+
+notifications:
+  slack:
+    secure: LzZ31mlLy1Y9Bflkf5pDT/b60nLUoDzY+sfXGB862DTp1eFnr/Lu7R87Z6lqlKAeUcK9bWeZFflZFM+cQ6uey0zq2OPnwjcsVRLci7Ucr7sZWWknrm5pXoyh490HDsft3Duvpp9CCunLOBgk2CMO9reFG2QVuIKd0FaJY6pTjvqoh4XwrVy9Xo3Z7LT1RLz4/JZ4NyBWYeQVdAwliT5wroLH6cxO3LXFtoU0DTWqNq0OZigtMqJuP7vpaY6tr75D3e7qgGDUzgYnEyRPZvAgNXtWTh+w3UWTIrg8Palh9zpehfI35npQvl8xSX7k3R0bupj8G53k2WKp2/ZAUfzKCs105lqAVJHkr4VQJVPP3E9ttBRH0aQtW3lIw9gv3opex3rC8Tb9LM/++IX+vzTvC1KHS9eqjZMo0tSuAV44vHQBc3J0Q8Z8EWlZho80QzIC7FAKYSTeDck8ONQnR3fRNJuWMuNwdy3Q4Fwc9Hg6DkV7O3Vc6z2CoS7DI2jIqS7E3/uJ0W5HCmn2Qq0E0qQ+VJt2nooXEThkYRBq6OLpVC40HgV42i8p/plUdqOJ9xtcyDdVa1ulntd+nS65ZC86W2F9/IqCnLb8wiim4rrxTcTZIwvQsRbKt3QBC4uIwlOBuzQahHt78P92MZyjfxcRCvshIvtMwU61riK8FoQ75ck=
