@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/microdevs/missy/log"
 	"os"
+	"github.com/microdevs/missy/data"
 )
 
 type Server struct {
@@ -63,11 +64,11 @@ func (s *Server) prepareBeforeStart() {
 }
 
 // handle func wrapper with token validation, logging recovery and metrics
-func (s *Server) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
+func (s *Server) HandleFunc(pattern string, handler func(ResponseWriter, *http.Request)) *mux.Route {
 	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
 		timer := NewTimer()
 		// use our response writer
-		w := &ResponseWriter{ResponseWriter: originalResponseWriter, status: 200}
+		w := ResponseWriter{ResponseWriter: originalResponseWriter, status: 200}
 		defer s.finalizeRequest(w, r, timer)
 		// call custom handler
 		handler(w, r)
@@ -84,13 +85,12 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func (s Server) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Timer) {
+func (s Server) finalizeRequest(w ResponseWriter, r *http.Request, timer *Timer) {
 	if err := recover(); err != nil {
 		stack := make([]byte, 1024 * 8)
 		stack = stack[:runtime.Stack(stack, false)]
 		log.Error("PANIC: %s\n%s", err, stack)
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		//log.Info("%s \"%s %s %s\" %d", r.RemoteAddr, r.Method, r.URL, r.Proto, w.status)
+		http.Error(w.ResponseWriter, "500 Internal Server Error", http.StatusInternalServerError)
 	}
 	s.prometheus.OnRequestFinished(r.Method, r.URL.Path, w.status, timer.durationMillis())
 	// access log
@@ -105,4 +105,19 @@ type ResponseWriter struct {
 func (w *ResponseWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
+}
+
+func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
+	resp, err := data.MarshalResponse(w, r, subject)
+
+	if err != nil {
+		http.Error(w, "Unexpected Error: " + err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(resp)
+}
+
+func (w *ResponseWriter) Error(error string, code int) {
+	http.Error(w.ResponseWriter, error, code)
 }
