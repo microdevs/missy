@@ -3,7 +3,7 @@ package config
 // Holds the service config for the MiSSy service
 type Config struct {
 	Name string `yaml:"name"`
-	Environment []EnvParameter `yaml:"environment,flow"`
+	Environment []EnvParameter `yaml:"environment,flow,omitempty"`
 }
 // Defines how a config value is passed through an environment variable. This struct as members for
 // default values and usage description. It also can mark the variable non-mandatory. An external system

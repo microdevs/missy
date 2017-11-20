@@ -10,6 +10,9 @@ import (
 	"os"
 	"github.com/microdevs/missy/data"
 	"github.com/microdevs/missy/config"
+	"flag"
+	"encoding/json"
+	"bytes"
 )
 
 type Server struct {
@@ -23,6 +26,35 @@ type Server struct {
 
 var listenPort = "8080"
 var listenHost = "localhost"
+var controllerAddr string
+
+const FlagMissyControllerAddressDefault = "http://missy-controller"
+const FlagMissyControllerUsage = "The address of the MiSSy controller"
+
+func init() {
+	initCmd := flag.NewFlagSet("init", flag.ExitOnError)
+	initCmd.StringVar(&controllerAddr, "addr", FlagMissyControllerAddressDefault, FlagMissyControllerUsage)
+	initCmd.StringVar(&controllerAddr, "a", FlagMissyControllerAddressDefault,  FlagMissyControllerUsage + " (Shorthand)")
+
+	if len(os.Args) > 1 && os.Args[1] == "init" {
+		initCmd.Parse(os.Args[2:])
+		c := config.GetInstance()
+		cjson, jsonErr := json.Marshal(c)
+		if jsonErr != nil {
+			fmt.Println("Error marshalling config to json.")
+			os.Exit(1)
+		}
+		log.Infof("Registering service %s with MiSSy controller at %s", c.Name, controllerAddr)
+		_, err := http.Post(controllerAddr + "/registerService", "application/json", bytes.NewReader(cjson))
+		// todo: check response for return status
+		if err != nil {
+			fmt.Printf("Can not reach missy controller: %s", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+}
 
 // get a new server object
 func NewServer() *Server {
