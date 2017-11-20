@@ -8,11 +8,36 @@ import (
 	"bytes"
 	"regexp"
 	"strings"
+	"io/ioutil"
+	"github.com/microdevs/missy/config"
+	"os"
 )
+
+func TestMain(m *testing.M) {
+	// setup
+	var yml = []byte(`
+name: test
+environment:
+  - envName: ENVVAR_A
+    defaultValue: foo
+    internalName: var.a
+    mandatory: false
+    usage: "This is the description for ENVVAR_A"
+  - envName: ENVVAR_B
+    defaultValue: "bar"
+    internalName: var.b
+    mandatory: false
+    usage: "This is the description for ENVVAR_B"
+`)
+	ioutil.WriteFile(config.MissyConfigFile, yml, os.FileMode(0644))
+	m.Run()
+	//teardown
+	os.Remove(config.MissyConfigFile)
+}
 
 func TestNewServer(t *testing.T) {
 
-	s := NewServer("testname")
+	s := NewServer()
 
 	if ty := reflect.TypeOf(s).String(); ty != "*server.Server" {
 		t.Errorf("NewServer did not return a Pointer to Server but %s", ty)
@@ -29,7 +54,7 @@ func TestNewServerWithDifferentHostPort(t *testing.T) {
 	syscall.Setenv("LISTEN_HOST", testhost)
 	syscall.Setenv("LISTEN_PORT", testport)
 
-	s := NewServer("evil")
+	s := NewServer()
 
 	if s.Host != testhost {
 		t.Errorf("Expected Host set to %s got %s", testhost, s.Host)
@@ -42,11 +67,10 @@ func TestNewServerWithDifferentHostPort(t *testing.T) {
 
 func TestServerEndpoints(t *testing.T) {
 	buf := new(bytes.Buffer)
-	testname := "testendpoint"
 	testhost := "localhost"
 	testport := "8089"
 
-	s := NewServer(testname)
+	s := NewServer()
 	s.Host = testhost
 	s.Port = testport
 	go s.StartServer()
@@ -62,7 +86,7 @@ func TestServerEndpoints(t *testing.T) {
 
 	buf.ReadFrom(response0.Body)
 	body0 := buf.Bytes()
-	exp := `^Name` + testname + `\s*Uptime \d+\.\d{6}s|ms|µs`
+	exp := `^Name` + s.name + `\s*Uptime \d+\.\d{6}s|ms|µs`
 	matches, errInfoRegex := regexp.Match(exp,body0)
 	if errInfoRegex != nil || matches == false {
 		t.Errorf("/info Response did not match expected response body, got %s, error: %v", string(body0), errInfoRegex)

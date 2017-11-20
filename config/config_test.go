@@ -2,62 +2,72 @@ package config
 
 import (
 	"testing"
-	"syscall"
+	_ "syscall"
+	"io/ioutil"
+	"os"
+	"bytes"
 )
 
-func TestConfig(t *testing.T) {
-	//new config should be empty
-	if len(parameters) > 0 {
-		t.Errorf("New config is not empty, found %v", parameters)
-	}
+var yml = []byte(`
+name: test
+environment:
+  - envName: ENVVAR_A
+    defaultValue: foo
+    internalName: var.a
+    mandatory: false
+    usage: "This is the description for ENVVAR_A"
+  - envName: ENVVAR_B
+    defaultValue: "bar"
+    internalName: var.b
+    mandatory: false
+    usage: "This is the description for ENVVAR_B"
+`)
 
-	envName := "TEST"
-	defaultValue := "foo"
-	internalName := "test"
-	mandatory := true
-	usage := "testusage"
+var ymlMandatory = []byte(`
+name: test
+environment:
+  - envName: ENVVAR_A
+    defaultValue: foo
+    internalName: var.a
+    mandatory: true
+    usage: "This is the description for ENVVAR_A"
+  - envName: ENVVAR_B
+    defaultValue: "bar"
+    internalName: var.b
+    mandatory: false
+    usage: "This is the description for ENVVAR_B"
+`)
 
-
-	// register mandatory parameter
-	RegisterParameter(envName, defaultValue, internalName, mandatory, usage)
-
-	// make sure we have 1 registered parameter
-	if len(parameters) != 1 {
-		t.Errorf("Config should hold 1 parameter, found %d", len(parameters))
-	}
-
-	// make sure all was set propery
-	p := parameters[internalName]
-	if p.EnvName != envName {
-		t.Errorf("Expeted to be envName %s got %s", envName, p.EnvName)
-	}
-
-	if p.Mandatory != mandatory {
-		t.Errorf("Expeted mandatory to be %v got %v", mandatory, p.Mandatory)
-	}
-
-	if p.Usage != usage {
-		t.Errorf("Expeted usage to be %s got %s", usage, p.Usage)
-	}
-
-	if p.Value != defaultValue {
-		t.Errorf("Expeted value to be %s got %s", defaultValue, p.Value)
-	}
-
-	// get value, expect default value
-	v0 := Get(internalName)
-	if v0 != defaultValue {
-		t.Errorf("Getting value before Parse() should return defaultValue %s, got %s", defaultValue, v0)
-	}
-
-	// set env variable and parse, test for right value
-	testValue := "foobar"
-	syscall.Setenv(envName, testValue)
-	Parse()
-	v1 := Get(internalName)
-	if v1 != testValue {
-		t.Errorf("Getting value after Parse() should return value %s, got %s", testValue, v1)
-	}
-
+func TestParseValueConfig(t *testing.T) {
+	parseConfigYAML(yml)
 }
 
+func TestLoadDefaultConfigFile(t *testing.T) {
+	ioutil.WriteFile(MissyConfigFile, yml, os.FileMode(0644))
+	rb, readErr := readDefaultFile()
+	if readErr != nil {
+		t.Error("Cannot read file")
+		return
+	}
+	if bytes.Compare(rb, yml) != 0 {
+		t.Error("Contents of read file does not equal contents written.")
+	}
+	//cleanup
+	os.Remove(MissyConfigFile)
+}
+
+func TestParseEnvironment(t *testing.T) {
+
+	os.Setenv("ENVVAR_A", "testA")
+
+	parseConfigYAML(ymlMandatory)
+	config.ParseEnv()
+
+	if config.Get("var.a") != "testA" {
+		t.Error("ENVVAR_A was not set correcly")
+	}
+
+	if config.Get("var.b") != "bar" {
+		t.Error("ENVVAR_B was not set to default valule")
+	}
+}

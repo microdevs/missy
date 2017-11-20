@@ -9,6 +9,7 @@ import (
 	"github.com/microdevs/missy/log"
 	"os"
 	"github.com/microdevs/missy/data"
+	"github.com/microdevs/missy/config"
 )
 
 type Server struct {
@@ -24,7 +25,7 @@ var listenPort = "8080"
 var listenHost = "localhost"
 
 // get a new server object
-func NewServer(name string) *Server {
+func NewServer() *Server {
 
 	if _, present := os.LookupEnv("LISTEN_HOST"); present {
 		listenHost = os.Getenv("LISTEN_HOST")
@@ -34,11 +35,13 @@ func NewServer(name string) *Server {
 		listenPort = os.Getenv("LISTEN_PORT")
 	}
 
+	c := config.GetInstance()
+
 	return &Server{
-		name: name,
+		name: c.Name,
 		Host: listenHost,
 		Port: listenPort,
-		prometheus: NewPrometheus(name),
+		prometheus: NewPrometheus(c.Name),
 		router: mux.NewRouter()}
 }
 
