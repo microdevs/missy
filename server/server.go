@@ -126,6 +126,7 @@ func (s Server) finalizeRequest(w ResponseWriter, r *http.Request, timer *Timer)
 		stack = stack[:runtime.Stack(stack, false)]
 		log.Error("PANIC: %s\n%s", err, stack)
 		http.Error(w.ResponseWriter, "500 Internal Server Error", http.StatusInternalServerError)
+		w.status = http.StatusInternalServerError
 	}
 	s.prometheus.OnRequestFinished(r.Method, r.URL.Path, w.status, timer.durationMillis())
 	// access log
