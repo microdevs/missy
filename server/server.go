@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -13,6 +14,8 @@ import (
 	"flag"
 	"encoding/json"
 	"bytes"
+	"os/signal"
+	"time"
 )
 
 type Server struct {
@@ -78,15 +81,31 @@ func NewServer() *Server {
 }
 
 // start http server
-func (s *Server) StartServer() error {
-	log.Warnf("Starting service %s listening on %s:%s ...", s.name, s.Host, s.Port)
+func (s *Server) StartServer() {
+	// Open a channel to capture ^C signal
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	// start the server
+	log.Infof("Starting service %s listening on %s:%s ...", s.name, s.Host, s.Port)
 	s.prepareBeforeStart()
+	// set host and port to listen to
 	listen := s.Host + ":" + s.Port
-	err := http.ListenAndServe(listen, nil); if (err != nil) {
-		log.Fatalf("Error starting Server due to %v", err)
-	}
-	log.Warn("...shutting down.")
-	return err
+	h := &http.Server{Addr: listen, Handler: s.Router}
+	// run server in background
+	go func() {
+		err := h.ListenAndServe();
+		if (err != nil) {
+			log.Fatalf("Error starting Server due to %v", err)
+		}
+	}()
+
+	//wait for SIGTERM
+	<- stop
+	log.Warnf("Server shutting down...")
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	//TODO: build some connection drainer for websockets
+	h.Shutdown(ctx)
+	log.Infof("Server stopped gracefully.")
 }
 
 func (s *Server) prepareBeforeStart() {
@@ -164,4 +183,5 @@ func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
 
 func (w *ResponseWriter) Error(error string, code int) {
 	http.Error(w.OriginalWriter, error, code)
+	w.Status = code
 }
