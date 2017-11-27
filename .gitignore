@@ -16,3 +16,9 @@
 # IntelliJ
 .idea
 *iml
+
+# vendor folder created by go dep
+vendor/
+
+# tests covers files
+*.coverprofile
