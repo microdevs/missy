@@ -21,7 +21,7 @@ type Server struct {
 	Port         string
 	prometheus   *PrometheusHolder
 	timer        *Timer
-	router       *mux.Router
+	Router       *mux.Router
 }
 
 var listenPort = "8080"
@@ -74,7 +74,7 @@ func NewServer() *Server {
 		Host: listenHost,
 		Port: listenPort,
 		prometheus: NewPrometheus(c.Name),
-		router: mux.NewRouter()}
+		Router: mux.NewRouter()}
 }
 
 // start http server
@@ -91,24 +91,24 @@ func (s *Server) StartServer() error {
 
 func (s *Server) prepareBeforeStart() {
 	s.timer = NewTimer()
-	s.router.Handle("/metrics", promhttp.Handler()).Methods("GET")
-	s.router.HandleFunc("/health", s.healthHandler).Methods("GET")
-	s.router.HandleFunc("/info", s.infoHandler).Methods("GET")
+	s.Router.Handle("/metrics", promhttp.Handler()).Methods("GET")
+	s.Router.HandleFunc("/health", s.healthHandler).Methods("GET")
+	s.Router.HandleFunc("/info", s.infoHandler).Methods("GET")
 
-	http.Handle("/", s.router)
+	http.Handle("/", s.Router)
 }
 
 // handle func wrapper with token validation, logging recovery and metrics
-func (s *Server) HandleFunc(pattern string, handler func(ResponseWriter, *http.Request)) *mux.Route {
+func (s *Server) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
 	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
 		timer := NewTimer()
 		// use our response writer
-		w := ResponseWriter{ResponseWriter: originalResponseWriter, status: 200}
+		w := &ResponseWriter{OriginalWriter: originalResponseWriter, Status: http.StatusOK}
 		defer s.finalizeRequest(w, r, timer)
 		// call custom handler
 		handler(w, r)
 	}
-	return s.router.HandleFunc(pattern, h)
+	return s.Router.HandleFunc(pattern, h)
 }
 
 func (s *Server) infoHandler(w http.ResponseWriter, r *http.Request) {
@@ -120,27 +120,35 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func (s Server) finalizeRequest(w ResponseWriter, r *http.Request, timer *Timer) {
+func (s Server) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Timer) {
 	if err := recover(); err != nil {
 		stack := make([]byte, 1024 * 8)
 		stack = stack[:runtime.Stack(stack, false)]
 		log.Error("PANIC: %s\n%s", err, stack)
-		http.Error(w.ResponseWriter, "500 Internal Server Error", http.StatusInternalServerError)
-		w.status = http.StatusInternalServerError
+		http.Error(w.OriginalWriter, "500 Internal Server Error", http.StatusInternalServerError)
+		w.Status = http.StatusInternalServerError
 	}
-	s.prometheus.OnRequestFinished(r.Method, r.URL.Path, w.status, timer.durationMillis())
+	s.prometheus.OnRequestFinished(r.Method, r.URL.Path, w.Status, timer.durationMillis())
 	// access log
-	log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.status, r.UserAgent())
+	log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.Status, r.UserAgent())
 }
 
 type ResponseWriter struct {
-	http.ResponseWriter
-	status int
+	OriginalWriter http.ResponseWriter
+	Status int
+}
+
+func (w *ResponseWriter) Header() http.Header {
+	return w.OriginalWriter.Header()
 }
 
 func (w *ResponseWriter) WriteHeader(code int) {
-	w.status = code
-	w.ResponseWriter.WriteHeader(code)
+	w.Status = code
+	w.OriginalWriter.WriteHeader(code)
+}
+
+func (w *ResponseWriter) Write(bytes []byte) (int, error) {
+	return w.OriginalWriter.Write(bytes)
 }
 
 func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
@@ -151,9 +159,9 @@ func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
 		return
 	}
 
-	w.Write(resp)
+	w.OriginalWriter.Write(resp)
 }
 
 func (w *ResponseWriter) Error(error string, code int) {
-	http.Error(w.ResponseWriter, error, code)
+	http.Error(w.OriginalWriter, error, code)
 }

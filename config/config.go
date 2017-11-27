@@ -33,6 +33,10 @@ func GetInstance() *Config {
 	return config
 }
 
+func Get(name string) string {
+	return GetInstance().Get(name)
+}
+
 // parse yaml data to config struct
 func parseConfigYAML(cb []byte) error {
 	return yaml.Unmarshal(cb, &config)
@@ -43,7 +47,7 @@ func readDefaultFile() ([]byte, error) {
 	return ioutil.ReadFile(MissyConfigFile)
 }
 
-// Parses all configured enviroment variables according to configuration to the internal names. Checks if values have
+// Parses all configured environment variables according to configuration to the internal names. Checks if values have
 // been set and if not sets default values. If parameter is not set but mandatory this function will collect all missing
 // parameters in a list and exits the program with a usage message.
 func (c *Config) ParseEnv() {
