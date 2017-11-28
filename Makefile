@@ -1,7 +1,7 @@
 # Makefile to provide common wrapped commands
 
 # go dep version https://github.com/golang/dep
-DEP_VERSION="0.3.2"
+DEP_VERSION=0.3.2
 
 # check the undelaying operation system and set as lowercase for further processing
 OS := $(shell uname | tr A-Z a-z)
