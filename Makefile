@@ -13,7 +13,7 @@ DEP := $(shell command -v dep 2> /dev/null)
 ensure_go_dep:
 ifndef DEP
 	@echo "go dep not installed; installing..."
-	- curl -L -s https://github.com/golang/dep/releases/download/v$(DEP_VERSION)/dep-$(OS)-amd64 -o $GOPATH/bin/dep
+	- curl -L -s https://github.com/golang/dep/releases/download/v$(DEP_VERSION)/dep-$(OS)-amd64 -o $(GOPATH)/bin/dep
 	- chmod +x $(GOPATH)/bin/dep
 endif
 	@echo "go dep already installed."
