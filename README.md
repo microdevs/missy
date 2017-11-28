@@ -1,4 +1,4 @@
-# MIcroservice Support SYstem (MISSY)
+# MIcroservice Support SYstem (MiSSy)
 
 [![Build Status](https://travis-ci.org/microdevs/missy.svg?branch=master)](https://travis-ci.org/microdevs/missy) [![Coverage Status](https://coveralls.io/repos/github/microdevs/missy/badge.svg?branch=master)](https://coveralls.io/github/microdevs/missy?branch=master)
 
@@ -22,26 +22,30 @@ MISSY is a library for creating REST services that talk to each other. It provid
 
 Example for a simple hello world service
 
+Create a `.missy.yml` config file in the root directory of your service with the following content
+
+```
+name: hello
+```
+
 ```
 # main.go
 
 package main
 
 import (
-	"github.com/microdevs/missy/server"
+	"github.com/microdevs/missy/service"
 	"net/http"
 	"fmt"
 )
 
 func main() {
-	s := server.NewServer("hello-service")
-	s.HandleFunc("/foo/{name}", fooHandler).Methods("GET")
-	s.Port = "8088"
-	s.StartServer()
+	s := service.New()
+	s.HandleFunc("/hello/{name}", HelloHandler).Methods("GET")
+	s.Start()
 }
 
-func fooHandler(w http.ResponseWriter, r *http.Request) {
-
+func HelloHandler(w *service.ResponseWriter, r *http.Request) {
 	vars := server.Vars(r)
 	w.Write([]byte(fmt.Sprintf("Hello %s", vars["name"])))
 }
@@ -53,7 +57,7 @@ func fooHandler(w http.ResponseWriter, r *http.Request) {
 
 ### Call the Endpoint:
 ```
-curl "http://localhost:8088/foo/bar"
+curl "http://localhost:8088/hello/microdevs"
 ```
 
 Get Prometheus Metrics:
@@ -68,7 +72,7 @@ http://localhost:8088/info
 
 Response:
 ```
-Name service-a
+Name hello
 Uptime 14.504883092s
 ```
 ### Get Health:

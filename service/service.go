@@ -1,4 +1,4 @@
-package server
+package service
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-type Server struct {
+type Service struct {
 	name         string
 	Host 	     string
 	Port         string
@@ -59,8 +59,8 @@ func init() {
 
 }
 
-// get a new server object
-func NewServer() *Server {
+// get a new Service object
+func New() *Service {
 
 	if _, present := os.LookupEnv("LISTEN_HOST"); present {
 		listenHost = os.Getenv("LISTEN_HOST")
@@ -72,7 +72,7 @@ func NewServer() *Server {
 
 	c := config.GetInstance()
 
-	return &Server{
+	return &Service{
 		name: c.Name,
 		Host: listenHost,
 		Port: listenPort,
@@ -81,7 +81,7 @@ func NewServer() *Server {
 }
 
 // start http server
-func (s *Server) StartServer() {
+func (s *Service) Start() {
 	// Open a channel to capture ^C signal
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -95,20 +95,22 @@ func (s *Server) StartServer() {
 	go func() {
 		err := h.ListenAndServe();
 		if (err != nil) {
-			log.Fatalf("Error starting Server due to %v", err)
+			log.Fatalf("Error starting Service due to %v", err)
 		}
 	}()
 
 	//wait for SIGTERM
 	<- stop
-	log.Warnf("Server shutting down...")
+	// we linebreak here just to get the log message pringted nicely
+	fmt.Print("\n")
+	log.Warnf("Service shutting down...")
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	//TODO: build some connection drainer for websockets
 	h.Shutdown(ctx)
-	log.Infof("Server stopped gracefully.")
+	log.Infof("Service stopped gracefully.")
 }
 
-func (s *Server) prepareBeforeStart() {
+func (s *Service) prepareBeforeStart() {
 	s.timer = NewTimer()
 	s.Router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 	s.Router.HandleFunc("/health", s.healthHandler).Methods("GET")
@@ -118,7 +120,7 @@ func (s *Server) prepareBeforeStart() {
 }
 
 // handle func wrapper with token validation, logging recovery and metrics
-func (s *Server) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
+func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
 	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
 		timer := NewTimer()
 		// use our response writer
@@ -130,16 +132,16 @@ func (s *Server) HandleFunc(pattern string, handler func(*ResponseWriter, *http.
 	return s.Router.HandleFunc(pattern, h)
 }
 
-func (s *Server) infoHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) infoHandler(w http.ResponseWriter, r *http.Request) {
 	info := fmt.Sprintf("Name %s\nUptime %s", s.name, s.timer.Uptime())
 	w.Write([]byte(info))
 }
 
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func (s Server) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Timer) {
+func (s Service) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Timer) {
 	if err := recover(); err != nil {
 		stack := make([]byte, 1024 * 8)
 		stack = stack[:runtime.Stack(stack, false)]

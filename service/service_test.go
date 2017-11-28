@@ -1,4 +1,4 @@
-package server
+package service
 
 import (
 	"testing"
@@ -37,7 +37,7 @@ environment:
 
 func TestNewServer(t *testing.T) {
 
-	s := NewServer()
+	s := New()
 
 	if ty := reflect.TypeOf(s).String(); ty != "*server.Server" {
 		t.Errorf("NewServer did not return a Pointer to Server but %s", ty)
@@ -54,7 +54,7 @@ func TestNewServerWithDifferentHostPort(t *testing.T) {
 	syscall.Setenv("LISTEN_HOST", testhost)
 	syscall.Setenv("LISTEN_PORT", testport)
 
-	s := NewServer()
+	s := New()
 
 	if s.Host != testhost {
 		t.Errorf("Expected Host set to %s got %s", testhost, s.Host)
@@ -70,7 +70,7 @@ func TestServerEndpoints(t *testing.T) {
 	testhost := "localhost"
 	testport := "8089"
 
-	s := NewServer()
+	s := New()
 	s.Host = testhost
 	s.Port = testport
 	go s.StartServer()
