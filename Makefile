@@ -10,18 +10,13 @@ OS := $(shell uname | tr A-Z a-z)
 DEP := $(shell command -v dep 2> /dev/null)
 
 # check if go dep (https://github.com/golang/dep) is installed; if not install and configure it
-check_for_go_dep:
+ensure_go_dep:
 ifndef DEP
 	@echo "go dep not installed; installing..."
 	- curl -L -s https://github.com/golang/dep/releases/download/v$(DEP_VERSION)/dep-$(OS)-amd64 -o $GOPATH/bin/dep
 	- chmod +x $(GOPATH)/bin/dep
 endif
 	@echo "go dep already installed."
-
-# check for go dep and ensure that all dependencies are met
-ensure_dep:
-	- make check_for_go_dep
-	- dep ensure
 
 ensure_coverall:
 	- go get github.com/mattn/goveralls

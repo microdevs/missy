@@ -1,8 +1,11 @@
 language: go
 
 before_install:
-  - make ensure_dep
+  - make ensure_go_dep
   - make ensure_coverall
+
+install:
+  - dep ensure
 
 script:
   - make tests_with_cover
