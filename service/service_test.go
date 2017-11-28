@@ -14,7 +14,13 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// setup
+	setup()
+	code := m.Run()
+	tearDown()
+	os.Exit(code)
+}
+
+func setup() {
 	var yml = []byte(`
 name: test
 environment:
@@ -30,25 +36,23 @@ environment:
     usage: "This is the description for ENVVAR_B"
 `)
 	ioutil.WriteFile(config.MissyConfigFile, yml, os.FileMode(0644))
-	m.Run()
-	//teardown
+}
+
+func tearDown() {
 	os.Remove(config.MissyConfigFile)
 }
 
-func TestNewServer(t *testing.T) {
-
+func TestNewService(t *testing.T) {
 	s := New()
-
-	if ty := reflect.TypeOf(s).String(); ty != "*server.Server" {
-		t.Errorf("NewServer did not return a Pointer to Server but %s", ty)
+	if ty := reflect.TypeOf(s).String(); ty != "*service.Service" {
+		t.Errorf("New() did not return a Pointer to Service but %s", ty)
 	}
-
-	if s.name != "testname" {
-		t.Errorf("Server's name was not set to \"testname\", got %s", s.name)
+	if s.name != "test" {
+		t.Errorf("Service's name was not set to \"test\", got %s", s.name)
 	}
 }
 
-func TestNewServerWithDifferentHostPort(t *testing.T) {
+func TestNewServiceWithDifferentHostPort(t *testing.T) {
 	testhost := "devil.hell"
 	testport := "666"
 	syscall.Setenv("LISTEN_HOST", testhost)
@@ -65,7 +69,7 @@ func TestNewServerWithDifferentHostPort(t *testing.T) {
 	}
 }
 
-func TestServerEndpoints(t *testing.T) {
+func TestServiceEndpoints(t *testing.T) {
 	buf := new(bytes.Buffer)
 	testhost := "localhost"
 	testport := "8089"
@@ -73,7 +77,7 @@ func TestServerEndpoints(t *testing.T) {
 	s := New()
 	s.Host = testhost
 	s.Port = testport
-	go s.StartServer()
+	go s.Start()
 
 	url := "http://" + s.Host + ":" + s.Port
 

@@ -28,6 +28,8 @@ func GetInstance() *Config {
 		if parseErr != nil {
 			log.Fatalf("Cannot parse config file %s with error: \"%s\"", MissyConfigFile, parseErr)
 		}
+
+		config.ParseEnv()
 	})
 
 	return config
