@@ -11,7 +11,11 @@ import (
 	"io/ioutil"
 	"strconv"
 	"github.com/microdevs/missy/log"
+	gourl "net/url"
 )
+
+const ContentTypeJson = "application/json"
+
 // todo: implement token auth
 // MiSSy Client object. Target is the service that will be called
 type Client struct {
@@ -26,12 +30,14 @@ func New(target string) *Client {
 	return &Client{Target: target}
 }
 
+
+
 // Generall Call function can handle all http methods, query string and json marshalling for posts
-func (c *Client) Call(method string, path string, query map[string]string, v interface{}) (*http.Response, error) {
+func (c *Client) Call(method string, path string, query gourl.Values, v interface{}) (*http.Response, error) {
 	//  create a reader in case we need to post or put
 	var dataReader *bytes.Reader
 
-	if method == "POST" || method == "PUT" {
+	if method == http.MethodPost || method == http.MethodPut {
 		dataByte, jsonErr := json.Marshal(v)
 		if jsonErr != nil {
 			return nil, errors.New("Failed to Marshal data to json")
@@ -39,18 +45,14 @@ func (c *Client) Call(method string, path string, query map[string]string, v int
 		dataReader = bytes.NewReader(dataByte)
 	}
 
-	// prepare the query string
-	queryString := ""
+	// build a querystring if there are some values
+	querystring := ""
 	if len(query) > 0 {
-		queryString += "?"
-		for k,v := range query {
-			queryString += k+"="+v+"&"
-		}
-		queryString = strings.TrimRight(queryString, "&")
+		querystring = "?"+query.Encode()
 	}
 
 	// build the url
-	url := "http://"+c.Target+":8080"+"/"+strings.TrimLeft(path, "/")+queryString
+	url := "http://"+c.Target+":8080"+"/"+strings.TrimLeft(path, "/") + querystring
 	log.Debugf("Calling service %s with url %s", c.Target, url)
 	// create a net/http client
 	// todo: make timeout configurable
@@ -60,7 +62,7 @@ func (c *Client) Call(method string, path string, query map[string]string, v int
 		case http.MethodGet:
 			return client.Get(url)
 		case http.MethodPost:
-			return client.Post(url, "application/json", dataReader)
+			return client.Post(url, ContentTypeJson, dataReader)
 		case http.MethodHead:
 			return client.Head(url)
 		case http.MethodPut:
@@ -68,7 +70,7 @@ func (c *Client) Call(method string, path string, query map[string]string, v int
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("unable to build request with error %s", err))
 			}
-			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Content-Type", ContentTypeJson)
 			return client.Do(request)
 		default:
 			return nil, errors.New(fmt.Sprintf("Method %s not implemented", method))
@@ -117,10 +119,11 @@ func (c *Client) GetById(entity string, id string, v interface{}) error {
 
 // get entity list from service
 func (c *Client) GetList(entity string, limit int, skip int, v interface{}) error {
-	var query map[string]string
-	query = make(map[string]string)
-	query["limit"] = strconv.Itoa(limit)
-	query["skip"] = strconv.Itoa(skip)
+	var query gourl.Values  = gourl.Values{}
+	query.Set("limit", strconv.Itoa(limit))
+	query.Set("skip", strconv.Itoa(skip))
+	querystring := query.Encode()
+	log.Debugf("Query %s", querystring)
 	resp, callErr := c.Call(http.MethodGet, entity+"/list", query, nil)
 	if callErr != nil {
 		return errors.New(fmt.Sprintf("Error calling service %s with message %s", c.Target, callErr))
