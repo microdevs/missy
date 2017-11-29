@@ -22,17 +22,18 @@
 
 
 [[constraint]]
+  branch = "master"
   name = "github.com/gorilla/mux"
-  version = "1.6.0"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/sirupsen/logrus"
-  version = "1.0.3"
 
 [[constraint]]
+  # no master branch
   branch = "v2"
   name = "gopkg.in/yaml.v2"
