@@ -34,6 +34,7 @@ func main() {
 		// pull up vault
 		vault(kubeconfig)
 		// pull up some datastore
+
 		// pull up missy-controller
 	}
 	os.Exit(0)
@@ -60,6 +61,7 @@ func vault(kubeconfig *string) {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
+						"name": "vault",
 						"app": "vault",
 						"tier": "missy",
 					},
