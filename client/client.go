@@ -1,4 +1,4 @@
-package client
+package missy
 
 import (
 	"net/http"
@@ -8,32 +8,42 @@ import (
 	"strings"
 	"fmt"
 	"time"
-	"io/ioutil"
-	"strconv"
 	"github.com/microdevs/missy/log"
 	gourl "net/url"
 )
 
 const ContentTypeJson = "application/json"
 
+type Client interface {
+	Create(entity string, data interface{}) error
+	Update(entity string, id string, data interface{}) error
+	Delete(entity string, id string) error
+	Get(entity string, id string, v interface{}) error
+	GetList(entity string, limit int, skip int, filters map[string]string) (interface{}, error)
+}
+
+type Connection interface {
+	Call(method string, path string, query gourl.Values, v interface{}) (*http.Response, error)
+}
+
 // todo: implement token auth
-// MiSSy Client object. Target is the service that will be called
-type Client struct {
+// MiSSy Service Connection object. Target is the service that will be called
+type ServiceConnection struct {
 	Target string
-	host string
-	port string
+	Host string
+	Port string
+	Token string
+	Timeout int
 }
 
-// Create a new Client for a target service
-func New(target string) *Client {
+// Create a new ServiceConnection for a target service
+func NewConnection(target string) *ServiceConnection {
 	//todo: implement service discovery and set host and port
-	return &Client{Target: target}
+	return &ServiceConnection{Target: target}
 }
 
-
-
-// Generall Call function can handle all http methods, query string and json marshalling for posts
-func (c *Client) Call(method string, path string, query gourl.Values, v interface{}) (*http.Response, error) {
+// Generall Call function can handle all http methods, query string and json marshalling for POST and PUT
+func (c *ServiceConnection) Call(method string, path string, query gourl.Values, v interface{}) (*http.Response, error) {
 	//  create a reader in case we need to post or put
 	var dataReader *bytes.Reader
 
@@ -53,7 +63,7 @@ func (c *Client) Call(method string, path string, query gourl.Values, v interfac
 
 	// build the url
 	url := "http://"+c.Target+":8080"+"/"+strings.TrimLeft(path, "/") + querystring
-	log.Debugf("Calling service %s with url %s", c.Target, url)
+	log.Debugf("Calling service %s with url %s and method %s", c.Target, url, method)
 	// create a net/http client
 	// todo: make timeout configurable
 	client := http.Client{Timeout: 10 * time.Second}
@@ -77,62 +87,5 @@ func (c *Client) Call(method string, path string, query gourl.Values, v interfac
 	}
 }
 
-// create wrapper to post a new entry
-func (c *Client) Create(entity string, data interface{}) error {
-	resp, callErr := c.Call(http.MethodPost, entity, nil, data)
-	if callErr != nil {
-		return errors.New(fmt.Sprintf("Error calling service %s with message %s", c.Target, callErr))
-	}
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error creating entity with code %s and message %s", string(resp.StatusCode), string(bodyBytes)))
-	}
-	return nil
-}
 
-// update wrapper to put a entry
-func (c *Client) Update(entity string, id string, data interface{}) error {
-	resp, callErr := c.Call(http.MethodPost, entity+"/"+id, nil, data)
-	if callErr != nil {
-		return errors.New(fmt.Sprintf("Error calling service %s with message %s", c.Target, callErr))
-	}
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(fmt.Sprintf("Error updating entity with code %s and message %s", string(resp.StatusCode), string(bodyBytes)))
-	}
-	return nil
-}
-
-// get entity by id from service
-func (c *Client) GetById(entity string, id string, v interface{}) error {
-	resp, callErr := c.Call(http.MethodGet, entity+"/"+id, nil, nil)
-	if callErr != nil {
-		return errors.New(fmt.Sprintf("Error calling service %s with message %s", c.Target, callErr))
-	}
-	bodyBytes, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return errors.New(fmt.Sprintf("Error Reading Body from service %s with message %s", c.Target, readErr))
-	}
-	json.Unmarshal(bodyBytes, v)
-	return nil
-}
-
-// get entity list from service
-func (c *Client) GetList(entity string, limit int, skip int, v interface{}) error {
-	var query gourl.Values  = gourl.Values{}
-	query.Set("limit", strconv.Itoa(limit))
-	query.Set("skip", strconv.Itoa(skip))
-	querystring := query.Encode()
-	log.Debugf("Query %s", querystring)
-	resp, callErr := c.Call(http.MethodGet, entity+"/list", query, nil)
-	if callErr != nil {
-		return errors.New(fmt.Sprintf("Error calling service %s with message %s", c.Target, callErr))
-	}
-	bodyBytes, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return errors.New(fmt.Sprintf("Error Reading Body from service %s with message %s", c.Target, readErr))
-	}
-	json.Unmarshal(bodyBytes, v)
-	return nil
-}
 
