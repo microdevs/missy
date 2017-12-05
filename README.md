@@ -2,7 +2,15 @@
 
 [![Build Status](https://travis-ci.org/microdevs/missy.svg?branch=master)](https://travis-ci.org/microdevs/missy) [![Coverage Status](https://coveralls.io/repos/github/microdevs/missy/badge.svg?branch=master)](https://coveralls.io/github/microdevs/missy?branch=master)
 
-MISSY is a library for creating REST services that talk to each other. It provides the following functionality
+MiSSy is an opinionated library for creating REST services that talk to each other.
+
+### Principles
+
+The design of MiSSy follows the following principles:
+
+- Microservices over Monoliths
+- Convention over Configuration
+- [Twelve-Factor App](https://12factor.net) Principles
 
 ### Features
 
