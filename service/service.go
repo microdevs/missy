@@ -16,13 +16,20 @@ import (
 	"bytes"
 	"os/signal"
 	"time"
+	gctx "github.com/gorilla/context"
 )
+
+type key int
+
+const PrometheusInstance key = 0
+const RouterInstance key = 1
+const RequestTimer key = 2
 
 type Service struct {
 	name         string
 	Host 	     string
 	Port         string
-	prometheus   *PrometheusHolder
+	Prometheus   *PrometheusHolder
 	timer        *Timer
 	Router       *mux.Router
 }
@@ -76,7 +83,7 @@ func New() *Service {
 		name: c.Name,
 		Host: listenHost,
 		Port: listenPort,
-		prometheus: NewPrometheus(c.Name),
+		Prometheus: NewPrometheus(c.Name),
 		Router: mux.NewRouter()}
 }
 
@@ -122,12 +129,16 @@ func (s *Service) prepareBeforeStart() {
 // handle func wrapper with token validation, logging recovery and metrics
 func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
 	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
-		timer := NewTimer()
+		// build context
+		gctx.Set(r, PrometheusInstance, s.Prometheus)
+		gctx.Set(r, RouterInstance, s.Router)
 		// use our response writer
-		w := &ResponseWriter{OriginalWriter: originalResponseWriter, Status: http.StatusOK}
-		defer s.finalizeRequest(w, r, timer)
+		w := &ResponseWriter{originalResponseWriter, http.StatusOK}
 		// call custom handler
-		handler(w, r)
+		handleFunc := HandlerFunc(handler)
+		chain := NewChain(StartTimerHandler, AccessLogHandler).Final(StopTimerHandler).Then(handleFunc)
+		chain.ServeHTTP(w,r)
+
 	}
 	return s.Router.HandleFunc(pattern, h)
 }
@@ -146,30 +157,22 @@ func (s Service) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Time
 		stack := make([]byte, 1024 * 8)
 		stack = stack[:runtime.Stack(stack, false)]
 		log.Error("PANIC: %s\n%s", err, stack)
-		http.Error(w.OriginalWriter, "500 Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		w.Status = http.StatusInternalServerError
 	}
-	s.prometheus.OnRequestFinished(r.Method, r.URL.Path, w.Status, timer.durationMillis())
+	s.Prometheus.OnRequestFinished(r.Method, r.URL.Path, w.Status, timer.durationMillis())
 	// access log
 	log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.Status, r.UserAgent())
 }
 
 type ResponseWriter struct {
-	OriginalWriter http.ResponseWriter
+	http.ResponseWriter
 	Status int
-}
-
-func (w *ResponseWriter) Header() http.Header {
-	return w.OriginalWriter.Header()
 }
 
 func (w *ResponseWriter) WriteHeader(code int) {
 	w.Status = code
-	w.OriginalWriter.WriteHeader(code)
-}
-
-func (w *ResponseWriter) Write(bytes []byte) (int, error) {
-	return w.OriginalWriter.Write(bytes)
+	w.ResponseWriter.WriteHeader(code)
 }
 
 func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
@@ -180,10 +183,21 @@ func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
 		return
 	}
 
-	w.OriginalWriter.Write(resp)
+	w.Write(resp)
 }
 
 func (w *ResponseWriter) Error(error string, code int) {
-	http.Error(w.OriginalWriter, error, code)
+	http.Error(w, error, code)
 	w.Status = code
+}
+
+type HandlerFunc func(*ResponseWriter, *http.Request)
+
+// ServeHTTP calls f(w, r).
+func (f HandlerFunc) ServeHTTP(w *ResponseWriter, r *http.Request) {
+	f(w, r)
+}
+
+type Handler interface {
+	ServeHTTP(w *ResponseWriter, r *http.Request)
 }
