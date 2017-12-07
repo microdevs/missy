@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"time"
 	gctx "github.com/gorilla/context"
+	"github.com/microdevs/missy/resource"
 )
 
 type key int
@@ -78,6 +79,8 @@ func New() *Service {
 	}
 
 	c := config.GetInstance()
+	resource.Setup(c)
+	c.ParseEnv()
 
 	return &Service{
 		name: c.Name,

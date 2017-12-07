@@ -28,8 +28,6 @@ func GetInstance() *Config {
 		if parseErr != nil {
 			log.Fatalf("Cannot parse config file %s with error: \"%s\"", MissyConfigFile, parseErr)
 		}
-
-		config.ParseEnv()
 	})
 
 	return config
@@ -96,4 +94,11 @@ func (c *Config) Get(internalName string) string {
 		}
 	}
 	return ""
+}
+
+func (c *Config) AddEnv(params ...EnvParameter) *Config {
+	for _,p := range params {
+		c.Environment = append(c.Environment, p)
+	}
+	return c
 }
