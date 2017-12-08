@@ -18,6 +18,9 @@ ifndef DEP
 endif
 	@echo "go dep already installed."
 
+check_gofmt:
+	scripts/check_gofmt.sh
+
 # check for go dep and ensure that all dependencies are met
 ensure_dep:
 	- make check_for_dep
