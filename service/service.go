@@ -127,18 +127,12 @@ func (s *Service) prepareBeforeStart() {
 }
 
 // handle func wrapper with token validation, logging recovery and metrics
-func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
-	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
+func (s *Service) HandleFunc(pattern string, handler http.HandlerFunc) *mux.Route {
+	h := func(w http.ResponseWriter, r *http.Request) {
 		// build context
 		gctx.Set(r, PrometheusInstance, s.Prometheus)
 		gctx.Set(r, RouterInstance, s.Router)
-		// use our response writer
-		w := &ResponseWriter{originalResponseWriter, http.StatusOK}
-		// call custom handler
-		handleFunc := HandlerFunc(handler)
-		chain := NewChain(StartTimerHandler, AccessLogHandler).Final(StopTimerHandler).Then(handleFunc)
-		chain.ServeHTTP(w,r)
-
+		MeasureTimeHandler(AccessLogHandler(handler))
 	}
 	return s.Router.HandleFunc(pattern, h)
 }
@@ -165,14 +159,27 @@ func (s Service) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Time
 	log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.Status, r.UserAgent())
 }
 
+/*
+  The Missy response writer is a ResponseWriter type that
+  wraps the original response writer and exposes the response code
+ */
 type ResponseWriter struct {
-	http.ResponseWriter
+	ow http.ResponseWriter
 	Status int
 }
 
+func (w *ResponseWriter) Header() http.Header{
+	return w.ow.Header()
+}
+
+func (w *ResponseWriter) Write(p []byte) (int, error){
+	return w.ow.Write(p)
+}
+
+
 func (w *ResponseWriter) WriteHeader(code int) {
 	w.Status = code
-	w.ResponseWriter.WriteHeader(code)
+	w.WriteHeader(code)
 }
 
 func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
@@ -189,15 +196,4 @@ func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
 func (w *ResponseWriter) Error(error string, code int) {
 	http.Error(w, error, code)
 	w.Status = code
-}
-
-type HandlerFunc func(*ResponseWriter, *http.Request)
-
-// ServeHTTP calls f(w, r).
-func (f HandlerFunc) ServeHTTP(w *ResponseWriter, r *http.Request) {
-	f(w, r)
-}
-
-type Handler interface {
-	ServeHTTP(w *ResponseWriter, r *http.Request)
 }
