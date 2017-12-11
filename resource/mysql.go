@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"github.com/microdevs/missy/log"
 	"github.com/microdevs/missy/config"
+	"net/http"
+	"fmt"
+	"github.com/gorilla/context"
 )
 
 type Mysql struct {
@@ -16,8 +19,11 @@ type Mysql struct {
 }
 
 func (r *Mysql) Connection() (*sql.DB, error) {
+
+	dsn := fmt.Sprintf("mysql://%s:%s@%s:%s/%s",r.Username,r.Password,r.Host,r.Port,r.Db)
+
 	if r.ActiveConnection == nil {
-		db, err := sql.Open("mysql", "hello")
+		db, err := sql.Open("mysql", dsn)
 		if err != nil {
 			log.Errorf("Connection to ")
 			return nil, err
@@ -70,4 +76,16 @@ func (r *Mysql) Setup(c *config.Config) {
 	}
 
 	c.AddEnv(user, password, host, port, db)
+}
+
+func (r *Mysql) Initialize(req *http.Request) {
+	resource := Mysql{
+		Username: config.Get("mysql.user"),
+		Password: config.Get("mysql.password"),
+		Db: config.Get("mysql.db"),
+		Host: config.Get("mysql.host"),
+		Port: config.Get("mysql.port"),
+	}
+
+	context.Set(req, MysqlResourceKey, &resource)
 }

@@ -135,6 +135,7 @@ func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http
 		// build context
 		gctx.Set(r, PrometheusInstance, s.Prometheus)
 		gctx.Set(r, RouterInstance, s.Router)
+		resource.Initialize(r)
 		// use our response writer
 		w := &ResponseWriter{originalResponseWriter, http.StatusOK}
 		// call custom handler
