@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+const MysqlResourceName = "mysql"
+
 var mysqlInstance *Mysql
 var once sync.Once
 
@@ -22,6 +24,12 @@ type Mysql struct {
 }
 
 func MysqlConnection() *sql.DB {
+
+	if !config.GetInstance().ResourceAvailable(MysqlResourceName) {
+		log.Panic("Resource MySQL is not configured. Please add a resource entry in .missy.yml")
+		return nil
+	}
+
 	once.Do(func() {
 		mysql := Mysql{
 			Username: config.Get("mysql.user"),

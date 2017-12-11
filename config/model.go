@@ -18,3 +18,12 @@ type EnvParameter struct {
 	Usage string`yaml:"usage"`
 	Value string `yaml:"value,omitempty"`
 }
+// tests if resource is configured in config. We assume that this resource is then available
+func (c *Config) ResourceAvailable(test string) bool {
+	for _,v := range c.Resources {
+		if v == test {
+			return true
+		}
+	}
+	return false
+}

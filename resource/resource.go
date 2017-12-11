@@ -14,7 +14,7 @@ type Instance interface {
 func Setup(c *config.Config) {
 	for _, r := range c.Resources {
 		switch r {
-		case "mysql":
+		case MysqlResourceName:
 			my := Mysql{}
 			my.Setup(c)
 		}
