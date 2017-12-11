@@ -4,6 +4,4 @@ import "testing"
 
 func MarshalTest(t testing.T) {
 
-
-
 }

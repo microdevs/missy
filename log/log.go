@@ -35,9 +35,7 @@ func init() {
 	l.SetLevel(level)
 	l.Debugf("Setting Loglevel to %s", level.String())
 
-
 }
-
 
 // Wrapper around logrus
 func Debug(args ...interface{}) {
@@ -123,7 +121,3 @@ func Printf(format string, args ...interface{}) {
 func Println(args ...interface{}) {
 	l.Println(args...)
 }
-
-
-
-

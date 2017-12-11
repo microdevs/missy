@@ -1,8 +1,8 @@
 package service
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 func TestNewPrometheusHolder(t *testing.T) {

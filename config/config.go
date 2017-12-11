@@ -1,13 +1,13 @@
 package config
 
 import (
-	"syscall"
 	"fmt"
-	"os"
 	"github.com/microdevs/missy/log"
-	"io/ioutil"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
 	"sync"
+	"syscall"
 )
 
 const MissyConfigFile = ".missy.yml"

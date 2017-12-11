@@ -1,11 +1,11 @@
 package data
 
 import (
+	"encoding/json"
+	"encoding/xml"
+	"github.com/microdevs/missy/log"
 	"net/http"
 	"reflect"
-	"encoding/xml"
-	"encoding/json"
-	"github.com/microdevs/missy/log"
 )
 
 func MarshalResponse(w http.ResponseWriter, r *http.Request, subject interface{}) ([]byte, error) {
@@ -20,7 +20,7 @@ func MarshalResponse(w http.ResponseWriter, r *http.Request, subject interface{}
 		if reflect.TypeOf(subject).Kind() == reflect.Slice {
 			s := reflect.ValueOf(subject)
 			interfaceSlice := make([]interface{}, s.Len())
-			for i:=0; i<s.Len(); i++ {
+			for i := 0; i < s.Len(); i++ {
 				interfaceSlice[i] = s.Index(i).Interface()
 			}
 			wrapper := Results{}
@@ -48,5 +48,5 @@ func MarshalResponse(w http.ResponseWriter, r *http.Request, subject interface{}
 type Results struct {
 	XMLName xml.Name `xml:"result"`
 	Results []interface{}
-	Length int `xml:"length,attr"`
+	Length  int `xml:"length,attr"`
 }

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"net/http"
 	"github.com/gorilla/mux"
+	"net/http"
 )
 
 func Vars(r *http.Request) map[string]string {
