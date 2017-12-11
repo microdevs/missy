@@ -1,13 +1,13 @@
 package config
 
 import (
-	"syscall"
 	"fmt"
-	"os"
 	"github.com/microdevs/missy/log"
-	"io/ioutil"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
 	"sync"
+	"syscall"
 )
 
 const MissyConfigFile = ".missy.yml"
@@ -91,9 +91,16 @@ func (c *Config) Get(internalName string) string {
 	// loop through all environment parameters and look for the internal name
 	// todo: enhance speed with an index if needed
 	for _, ep := range c.Environment {
+		if internalName == ep.EnvName {
+			log.Warnf("You're trying to get a config value by the environment variable name: %s", ep.EnvName)
+			log.Warnf("Please use the internal name instead: %s", ep.InternalName)
+			return ""
+		}
+
 		if ep.InternalName == internalName {
 			return ep.Value
 		}
 	}
+	log.Warnf("You're trying to get unknown config value: %s", internalName)
 	return ""
 }

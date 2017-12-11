@@ -16,3 +16,12 @@
 # IntelliJ
 .idea
 *iml
+
+# vendor folder created by go dep
+vendor/
+
+# tests covers files
+*.coverprofile
+
+# lets add Gopkg.lock to .gitignore to ensure having latest version of dependencies during CI builds
+Gopkg.lock

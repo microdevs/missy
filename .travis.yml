@@ -1,14 +1,15 @@
 language: go
 
 before_install:
-  - go get golang.org/x/tools/cmd/cover
-  - go get github.com/mattn/goveralls
-  - go get github.com/modocache/gover
+  - make ensure_dep
+  - make ensure_coverall
+
+before_script:
+  - make check_gofmt
 
 script:
-  - go list -f '{{if len .TestGoFiles}}"go test -tags test -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}}"{{end}}' ./... | xargs -L 1 sh -c
-  - gover
-  - "$HOME/gopath/bin/goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $COVERALLS_TOKEN"
+  - make tests_with_cover
+  - make goveralls
 
 notifications:
   slack:

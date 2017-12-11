@@ -1,11 +1,11 @@
 package config
 
 import (
-	"testing"
-	_ "syscall"
+	"bytes"
 	"io/ioutil"
 	"os"
-	"bytes"
+	_ "syscall"
+	"testing"
 )
 
 var yml = []byte(`

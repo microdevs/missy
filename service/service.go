@@ -1,30 +1,37 @@
 package service
 
 import (
-	"context"
-	"fmt"
-	"net/http"
-	"runtime"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/gorilla/mux"
-	"github.com/microdevs/missy/log"
-	"os"
-	"github.com/microdevs/missy/data"
-	"github.com/microdevs/missy/config"
-	"flag"
-	"encoding/json"
 	"bytes"
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	gctx "github.com/gorilla/context"
+	"github.com/gorilla/mux"
+	"github.com/microdevs/missy/config"
+	"github.com/microdevs/missy/data"
+	"github.com/microdevs/missy/log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
+	"os"
 	"os/signal"
+	"runtime"
 	"time"
 )
 
+type key int
+
+const PrometheusInstance key = 0
+const RouterInstance key = 1
+const RequestTimer key = 2
+
 type Service struct {
-	name         string
-	Host 	     string
-	Port         string
-	prometheus   *PrometheusHolder
-	timer        *Timer
-	Router       *mux.Router
+	name       string
+	Host       string
+	Port       string
+	Prometheus *PrometheusHolder
+	timer      *Timer
+	Router     *mux.Router
 }
 
 var listenPort = "8080"
@@ -37,7 +44,7 @@ const FlagMissyControllerUsage = "The address of the MiSSy controller"
 func init() {
 	initCmd := flag.NewFlagSet("init", flag.ExitOnError)
 	initCmd.StringVar(&controllerAddr, "addr", FlagMissyControllerAddressDefault, FlagMissyControllerUsage)
-	initCmd.StringVar(&controllerAddr, "a", FlagMissyControllerAddressDefault,  FlagMissyControllerUsage + " (Shorthand)")
+	initCmd.StringVar(&controllerAddr, "a", FlagMissyControllerAddressDefault, FlagMissyControllerUsage+" (Shorthand)")
 
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		initCmd.Parse(os.Args[2:])
@@ -48,7 +55,7 @@ func init() {
 			os.Exit(1)
 		}
 		log.Infof("Registering service %s with MiSSy controller at %s", c.Name, controllerAddr)
-		_, err := http.Post(controllerAddr + "/registerService", "application/json", bytes.NewReader(cjson))
+		_, err := http.Post(controllerAddr+"/registerService", "application/json", bytes.NewReader(cjson))
 		// todo: check response for return status
 		if err != nil {
 			fmt.Printf("Can not reach missy controller: %s", err)
@@ -73,11 +80,11 @@ func New() *Service {
 	c := config.GetInstance()
 
 	return &Service{
-		name: c.Name,
-		Host: listenHost,
-		Port: listenPort,
-		prometheus: NewPrometheus(c.Name),
-		Router: mux.NewRouter()}
+		name:       c.Name,
+		Host:       listenHost,
+		Port:       listenPort,
+		Prometheus: NewPrometheus(c.Name),
+		Router:     mux.NewRouter()}
 }
 
 // start http server
@@ -93,14 +100,14 @@ func (s *Service) Start() {
 	h := &http.Server{Addr: listen, Handler: s.Router}
 	// run server in background
 	go func() {
-		err := h.ListenAndServe();
-		if (err != nil) {
+		err := h.ListenAndServe()
+		if err != nil {
 			log.Fatalf("Error starting Service due to %v", err)
 		}
 	}()
 
 	//wait for SIGTERM
-	<- stop
+	<-stop
 	// we linebreak here just to get the log message pringted nicely
 	fmt.Print("\n")
 	log.Warnf("Service shutting down...")
@@ -122,12 +129,16 @@ func (s *Service) prepareBeforeStart() {
 // handle func wrapper with token validation, logging recovery and metrics
 func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
 	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
-		timer := NewTimer()
+		// build context
+		gctx.Set(r, PrometheusInstance, s.Prometheus)
+		gctx.Set(r, RouterInstance, s.Router)
 		// use our response writer
-		w := &ResponseWriter{OriginalWriter: originalResponseWriter, Status: http.StatusOK}
-		defer s.finalizeRequest(w, r, timer)
+		w := &ResponseWriter{originalResponseWriter, http.StatusOK}
 		// call custom handler
-		handler(w, r)
+		handleFunc := HandlerFunc(handler)
+		chain := NewChain(StartTimerHandler, AccessLogHandler).Final(StopTimerHandler).Then(handleFunc)
+		chain.ServeHTTP(w, r)
+
 	}
 	return s.Router.HandleFunc(pattern, h)
 }
@@ -143,47 +154,50 @@ func (s *Service) healthHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s Service) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Timer) {
 	if err := recover(); err != nil {
-		stack := make([]byte, 1024 * 8)
+		stack := make([]byte, 1024*8)
 		stack = stack[:runtime.Stack(stack, false)]
 		log.Error("PANIC: %s\n%s", err, stack)
-		http.Error(w.OriginalWriter, "500 Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		w.Status = http.StatusInternalServerError
 	}
-	s.prometheus.OnRequestFinished(r.Method, r.URL.Path, w.Status, timer.durationMillis())
+	s.Prometheus.OnRequestFinished(r.Method, r.URL.Path, w.Status, timer.durationMillis())
 	// access log
 	log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.Status, r.UserAgent())
 }
 
 type ResponseWriter struct {
-	OriginalWriter http.ResponseWriter
+	http.ResponseWriter
 	Status int
-}
-
-func (w *ResponseWriter) Header() http.Header {
-	return w.OriginalWriter.Header()
 }
 
 func (w *ResponseWriter) WriteHeader(code int) {
 	w.Status = code
-	w.OriginalWriter.WriteHeader(code)
-}
-
-func (w *ResponseWriter) Write(bytes []byte) (int, error) {
-	return w.OriginalWriter.Write(bytes)
+	w.ResponseWriter.WriteHeader(code)
 }
 
 func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
 	resp, err := data.MarshalResponse(w, r, subject)
 
 	if err != nil {
-		http.Error(w, "Unexpected Error: " + err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Unexpected Error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.OriginalWriter.Write(resp)
+	w.Write(resp)
 }
 
 func (w *ResponseWriter) Error(error string, code int) {
-	http.Error(w.OriginalWriter, error, code)
+	http.Error(w, error, code)
 	w.Status = code
+}
+
+type HandlerFunc func(*ResponseWriter, *http.Request)
+
+// ServeHTTP calls f(w, r).
+func (f HandlerFunc) ServeHTTP(w *ResponseWriter, r *http.Request) {
+	f(w, r)
+}
+
+type Handler interface {
+	ServeHTTP(w *ResponseWriter, r *http.Request)
 }
