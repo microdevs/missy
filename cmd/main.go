@@ -2,19 +2,17 @@ package main
 
 import (
 	"flag"
-	"os"
-	"k8s.io/client-go/util/homedir"
-	"path/filepath"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/kubernetes"
-	apiv1 "k8s.io/api/core/v1"
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"fmt"
+	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+	"os"
+	"path/filepath"
 )
-
-
 
 func main() {
 
@@ -62,19 +60,19 @@ func vault(kubeconfig *string) {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"name": "vault",
-						"app": "vault",
+						"app":  "vault",
 						"tier": "missy",
 					},
 				},
 				Spec: apiv1.PodSpec{
-					Containers:[]apiv1.Container{
+					Containers: []apiv1.Container{
 						{
-							Name: "vault",
+							Name:  "vault",
 							Image: "vault:0.9.0",
 							Ports: []apiv1.ContainerPort{
 								{
-									Name: "http",
-									Protocol: apiv1.ProtocolTCP,
+									Name:          "http",
+									Protocol:      apiv1.ProtocolTCP,
 									ContainerPort: 8200,
 								},
 							},
@@ -98,13 +96,13 @@ func vault(kubeconfig *string) {
 
 	service := &apiv1.Service{
 		TypeMeta: metav1.TypeMeta{
-			Kind: "Service",
-			APIVersion:"v1",
+			Kind:       "Service",
+			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "vault",
 			Labels: map[string]string{
-				"app": "vault",
+				"app":  "vault",
 				"tier": "missy",
 			},
 		},
@@ -113,9 +111,9 @@ func vault(kubeconfig *string) {
 			Ports: []apiv1.ServicePort{
 				{
 					Protocol: apiv1.ProtocolTCP,
-					Port: 80,
+					Port:     80,
 					TargetPort: intstr.IntOrString{
-						Type: intstr.Int,
+						Type:   intstr.Int,
 						IntVal: int32(8200),
 					},
 				},

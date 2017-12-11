@@ -104,7 +104,7 @@ func (c *Config) Get(internalName string) string {
 }
 
 func (c *Config) AddEnv(params ...EnvParameter) *Config {
-	for _,p := range params {
+	for _, p := range params {
 		c.Environment = append(c.Environment, p)
 	}
 	return c

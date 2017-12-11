@@ -14,7 +14,7 @@ type Instance interface {
 }
 
 func Setup(c *config.Config) {
-	for _,r := range c.Resources{
+	for _, r := range c.Resources {
 		switch r {
 		case "mysql":
 			my := Mysql{}
@@ -25,7 +25,7 @@ func Setup(c *config.Config) {
 
 func Initialize(req *http.Request) {
 	c := config.GetInstance()
-	for _,r := range c.Resources{
+	for _, r := range c.Resources {
 		switch r {
 		case "mysql":
 			my := Mysql{}
@@ -33,4 +33,3 @@ func Initialize(req *http.Request) {
 		}
 	}
 }
-

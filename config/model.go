@@ -4,7 +4,7 @@ package config
 type Config struct {
 	Name        string         `yaml:"name"`
 	Environment []EnvParameter `yaml:"environment,flow,omitempty"`
-	Resources []string `yaml:"resources,omitempty"`
+	Resources   []string       `yaml:"resources,omitempty"`
 }
 
 // Defines how a config value is passed through an environment variable. This struct as members for
