@@ -35,4 +35,4 @@ tests_with_cover:
 
 goveralls:
 	- gover
-	- "$HOME/gopath/bin/goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $COVERALLS_TOKEN"
+	- "$$HOME/gopath/bin/goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $$COVERALLS_TOKEN"
