@@ -11,7 +11,7 @@ import (
 const httpHeaderAccept = "Accept"
 const httpHeaderContentType = "Content-Type"
 const contentTypeJSON = "application/json"
-const contentTypeXML= "text/xml"
+const contentTypeXML = "text/xml"
 
 // MarshalResponse will marshal any interface{} according to the Accept header of the passed request to JSON by default or XML if the header is set to text/xml
 func MarshalResponse(w http.ResponseWriter, r *http.Request, subject interface{}) ([]byte, error) {

@@ -1,10 +1,10 @@
 package data
 
 import (
-	"testing"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"io/ioutil"
+	"testing"
 )
 
 type TestStruct struct {
@@ -16,7 +16,7 @@ type TestStruct struct {
 var subject = TestStruct{
 	1,
 	"foo",
-	[]string{"foo","bar","baz"},
+	[]string{"foo", "bar", "baz"},
 }
 
 var expectedJSON = `{"A":1,"B":"foo","C":["foo","bar","baz"]}`
@@ -79,4 +79,3 @@ func TestMarshalToXML(t *testing.T) {
 	}
 
 }
-
