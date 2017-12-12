@@ -1,7 +1,8 @@
-// Chains provide a convenient way to chain http handlers.
 package service
 
-// A constructor for a piece of middleware.
+// Chains provide a convenient way to chain http handlers.
+
+// Constructor for a piece of middleware.
 // Some middleware use this constructor out of the box,
 // so in most cases you can just pass somepackage.New
 type Constructor func(Handler) Handler
@@ -15,7 +16,7 @@ type Chain struct {
 	finalFunc    Constructor
 }
 
-// New creates a new chain,
+// NewChain creates a new chain,
 // memorizing the given list of middleware constructors.
 // New serves no other function,
 // constructors are only called upon a call to Then().
@@ -23,6 +24,7 @@ func NewChain(constructors ...Constructor) *Chain {
 	return &Chain{append(([]Constructor)(nil), constructors...), nil}
 }
 
+// Final chain defines the final piece of the chain that is executed after the middleware called with Then()
 func (c *Chain) Final(ff Constructor) *Chain {
 	c.finalFunc = ff
 	return c

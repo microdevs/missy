@@ -13,8 +13,8 @@ DEP := $(shell command -v dep 2> /dev/null)
 check_for_dep:
 ifndef DEP
 	@echo "go dep not installed; installing..."
-	- curl -L -s https://github.com/golang/dep/releases/download/v$(DEP_VERSION)/dep-$(OS)-amd64 -o $(GOPATH)/bin/dep
-	- chmod +x $(GOPATH)/bin/dep
+	curl -L -s https://github.com/golang/dep/releases/download/v$(DEP_VERSION)/dep-$(OS)-amd64 -o $(GOPATH)/bin/dep
+	chmod +x $(GOPATH)/bin/dep
 endif
 	@echo "go dep already installed."
 
@@ -22,17 +22,16 @@ check_gofmt:
 	scripts/check_gofmt.sh
 
 # check for go dep and ensure that all dependencies are met
-ensure_dep:
-	- make check_for_dep
-	- dep ensure
+ensure_dep: check_for_dep
+	dep ensure
 
 ensure_coverall:
-	- go get github.com/mattn/goveralls
-	- go get github.com/modocache/gover
+	go get github.com/mattn/goveralls
+	go get github.com/modocache/gover
 
 tests_with_cover:
-	- go list -f '{{if len .TestGoFiles}}"go test -tags test -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}}"{{end}}' ./... | xargs -L 1 sh -c
+	go list -f '{{if len .TestGoFiles}}"go test -tags test -coverprofile={{.Dir}}/.coverprofile {{.ImportPath}}"{{end}}' ./... | xargs -L 1 sh -c
 
-goveralls:
-	- gover
-	- "$HOME/gopath/bin/goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $COVERALLS_TOKEN"
+goveralls: ensure_coverall
+	gover
+	goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $$COVERALLS_TOKEN
