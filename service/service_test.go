@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -79,6 +80,9 @@ func TestServiceEndpoints(t *testing.T) {
 	s.Port = testport
 	go s.Start()
 
+	// sleep a bit to wait for the server to start
+	time.Sleep(100 * time.Millisecond)
+
 	url := "http://" + s.Host + ":" + s.Port
 
 	// Test /info endpoint
@@ -90,7 +94,7 @@ func TestServiceEndpoints(t *testing.T) {
 
 	buf.ReadFrom(response0.Body)
 	body0 := buf.Bytes()
-	exp := `^Name` + s.name + `\s*Uptime \d+\.\d{6}s|ms|µs`
+	exp := `^Name ` + s.name + `\s*Uptime \d+\.\d+s|ms|µs`
 	matches, errInfoRegex := regexp.Match(exp, body0)
 	if errInfoRegex != nil || matches == false {
 		t.Errorf("/info Response did not match expected response body, got %s, error: %v", string(body0), errInfoRegex)

@@ -11,6 +11,7 @@ import (
 	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/data"
 	"github.com/microdevs/missy/log"
+	"github.com/microdevs/missy/resource"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
@@ -21,10 +22,16 @@ import (
 
 type key int
 
+// PrometheusInstance is a key for the context value of the PrometheusHolder
 const PrometheusInstance key = 0
-const RouterInstance key  = 1
+
+// RouterInstance is the key for the goilla/mux router instance in the context
+const RouterInstance key = 1
+
+// RequestTimer is the key for the request timer in context
 const RequestTimer key = 2
 
+// Service type provides a HTTP/Rest service
 type Service struct {
 	name       string
 	Host       string
@@ -38,9 +45,13 @@ var listenPort = "8080"
 var listenHost = "localhost"
 var controllerAddr string
 
+// FlagMissyControllerAddressDefault is a default for the missy-controller url used in the during service initialisation when given the init flag
 const FlagMissyControllerAddressDefault = "http://missy-controller"
+
+// FlagMissyControllerUsage is a usage message for the missy-controller url used in the during service initialisation when given the init flag
 const FlagMissyControllerUsage = "The address of the MiSSy controller"
 
+// init checks for init flag and executes the service registration with the missy controller if applicable
 func init() {
 	initCmd := flag.NewFlagSet("init", flag.ExitOnError)
 	initCmd.StringVar(&controllerAddr, "addr", FlagMissyControllerAddressDefault, FlagMissyControllerUsage)
@@ -66,7 +77,7 @@ func init() {
 
 }
 
-// get a new Service object
+// New returns a new Service object
 func New() *Service {
 
 	if _, present := os.LookupEnv("LISTEN_HOST"); present {
@@ -89,7 +100,7 @@ func New() *Service {
 		Router:     mux.NewRouter()}
 }
 
-// start http server
+// Start starts the http server
 func (s *Service) Start() {
 	// Open a channel to capture ^C signal
 	stop := make(chan os.Signal, 1)
@@ -113,12 +124,14 @@ func (s *Service) Start() {
 	// we linebreak here just to get the log message pringted nicely
 	fmt.Print("\n")
 	log.Warnf("Service shutting down...")
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel() // Cancel ctx as soon as handleSearch returns.
 	//TODO: build some connection drainer for websockets
 	h.Shutdown(ctx)
 	log.Infof("Service stopped gracefully.")
 }
 
+// prepareBeforeStart sets up the standard handlers
 func (s *Service) prepareBeforeStart() {
 	s.timer = NewTimer()
 	s.Router.Handle("/metrics", promhttp.Handler()).Methods("GET")
@@ -128,7 +141,7 @@ func (s *Service) prepareBeforeStart() {
 	http.Handle("/", s.Router)
 }
 
-// handle func wrapper with token validation, logging recovery and metrics
+// HandleFunc wrapper with token validation, logging recovery and metrics
 func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
 	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
 		// build context
@@ -145,15 +158,7 @@ func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http
 	return s.Router.HandleFunc(pattern, h)
 }
 
-func (s *Service) infoHandler(w http.ResponseWriter, r *http.Request) {
-	info := fmt.Sprintf("Name %s\nUptime %s", s.name, s.timer.Uptime())
-	w.Write([]byte(info))
-}
-
-func (s *Service) healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("OK"))
-}
-
+// finalizeRequest
 func (s Service) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Timer) {
 	if err := recover(); err != nil {
 		stack := make([]byte, 1024*8)
@@ -167,16 +172,19 @@ func (s Service) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Time
 	log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.Status, r.UserAgent())
 }
 
+// ResponseWriter is the MiSSy owned response writer object
 type ResponseWriter struct {
 	http.ResponseWriter
 	Status int
 }
 
+// WriteHeader overrides the original WriteHeader function to keep the status code
 func (w *ResponseWriter) WriteHeader(code int) {
 	w.Status = code
 	w.ResponseWriter.WriteHeader(code)
 }
 
+// Marshal an object to json or xml according the request Accept header
 func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
 	resp, err := data.MarshalResponse(w, r, subject)
 
@@ -188,18 +196,21 @@ func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
 	w.Write(resp)
 }
 
+// Error adds a shorthand to the http.Error function
 func (w *ResponseWriter) Error(error string, code int) {
 	http.Error(w, error, code)
 	w.Status = code
 }
 
+// HandlerFunc provides MiSSys own handler func
 type HandlerFunc func(*ResponseWriter, *http.Request)
 
-// ServeHTTP calls f(w, r).
+// ServeHTTP calls f(w, r)
 func (f HandlerFunc) ServeHTTP(w *ResponseWriter, r *http.Request) {
 	f(w, r)
 }
 
+// Handler MiSSy's own Handler interface taking the custom ResponseWriter
 type Handler interface {
 	ServeHTTP(w *ResponseWriter, r *http.Request)
 }
