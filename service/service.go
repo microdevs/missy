@@ -122,7 +122,8 @@ func (s *Service) Start() {
 	// we linebreak here just to get the log message pringted nicely
 	fmt.Print("\n")
 	log.Warnf("Service shutting down...")
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel() // Cancel ctx as soon as handleSearch returns.
 	//TODO: build some connection drainer for websockets
 	h.Shutdown(ctx)
 	log.Infof("Service stopped gracefully.")

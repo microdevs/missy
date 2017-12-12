@@ -30,10 +30,10 @@ func init() {
 	}
 	level, error := l.ParseLevel(loglevel)
 	if error != nil {
-		Fatalf("Unknown loglevel %s, allowed levels: debug, info, warn, error, fatal, panic")
+		Fatalf("Unknown log level %s, allowed levels: debug, info, warn, error, fatal, panic", loglevel)
 	}
 	l.SetLevel(level)
-	l.Debugf("Setting Loglevel to %s", level.String())
+	l.Debugf("Setting log level to %s", level.String())
 
 }
 
