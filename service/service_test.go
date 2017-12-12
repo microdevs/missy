@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -78,6 +79,9 @@ func TestServiceEndpoints(t *testing.T) {
 	s.Host = testhost
 	s.Port = testport
 	go s.Start()
+
+	// sleep a bit to wait for the server to start
+	time.Sleep(2 * time.Second)
 
 	url := "http://" + s.Host + ":" + s.Port
 
