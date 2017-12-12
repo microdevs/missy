@@ -30,15 +30,89 @@ func main() {
 
 		// init
 		// pull up vault
-		vault(kubeconfig)
+		vaultContainerPorts := []apiv1.ContainerPort{
+			{
+				Name:          "http",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8200,
+			},
+		}
+
+		vaultServicePorts := []apiv1.ServicePort{
+			{
+				Name: "http"
+				Protocol: apiv1.ProtocolTCP,
+				Port:     80,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: 8200,
+				},
+			},
+		}
+		deploy("vault", "vault-server", "vault:0.9.0", vaultContainerPorts, vaultServicePorts, "missy", kubeconfig)
 		// pull up some datastore
 
+	consulContainerPorts := []apiv1.ContainerPort{
+		{
+			Name:          "ui-port",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8500,
+		},
+		{
+			Name:          "alt-port",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8400,
+		},
+		{
+			Name:          "https-port",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8443,
+		},
+		{
+			Name:          "http-port",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8080,
+		},
+		{
+			Name:          "https-port",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8443,
+		},
+		{
+			Name:          "udp-port",
+			Protocol:      apiv1.ProtocolUDP,
+			ContainerPort: 53,
+		},
+		{
+			Name:          "serflan",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8301,
+		},
+		{
+			Name:          "serfwan",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8302,
+		},
+		{
+			Name:          "consuldns",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8600,
+		},
+		{
+			Name:          "server",
+			Protocol:      apiv1.ProtocolTCP,
+			ContainerPort: 8300,
+		},
+	}
+
+
+		deploy("consul", "consul-server", "", consulContainerPorts)
 		// pull up missy-controller
 	}
 	os.Exit(0)
 }
 
-func vault(kubeconfig *string) {
+func deploy(name string, appName string, image string, containerPorts []apiv1.ContainerPort, servicePorts []apiv1.ServicePort, tier string, kubeconfig *string) {
 
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
@@ -52,30 +126,24 @@ func vault(kubeconfig *string) {
 
 	deployment := &appsv1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "vault",
+			Name: name,
 		},
 		Spec: appsv1beta1.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"name": "vault",
-						"app":  "vault",
-						"tier": "missy",
+						"name": name,
+						"app":  appName,
+						"tier": tier,
 					},
 				},
 				Spec: apiv1.PodSpec{
 					Containers: []apiv1.Container{
 						{
-							Name:  "vault",
-							Image: "vault:0.9.0",
-							Ports: []apiv1.ContainerPort{
-								{
-									Name:          "http",
-									Protocol:      apiv1.ProtocolTCP,
-									ContainerPort: 8200,
-								},
-							},
+							Name:  name,
+							Image: image,
+							Ports: containerPorts,
 						},
 					},
 				},
@@ -100,26 +168,17 @@ func vault(kubeconfig *string) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "vault",
+			Name: name,
 			Labels: map[string]string{
-				"app":  "vault",
-				"tier": "missy",
+				"app":  appName,
+				"tier": tier,
 			},
 		},
 		Spec: apiv1.ServiceSpec{
 			Type: apiv1.ServiceTypeClusterIP,
-			Ports: []apiv1.ServicePort{
-				{
-					Protocol: apiv1.ProtocolTCP,
-					Port:     80,
-					TargetPort: intstr.IntOrString{
-						Type:   intstr.Int,
-						IntVal: int32(8200),
-					},
-				},
-			},
+			Ports: servicePorts,
 			Selector: map[string]string{
-				"name": "vault",
+				"name": name,
 			},
 		},
 	}
