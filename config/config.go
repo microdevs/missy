@@ -35,6 +35,7 @@ func GetInstance() *Config {
 
 	return config
 }
+
 // Get is a shorthand of config.GetInstance.Get() and returns a value by internal name from the config object
 func Get(name string) string {
 	return GetInstance().Get(name)

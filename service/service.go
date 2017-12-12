@@ -24,8 +24,10 @@ type key int
 
 // PrometheusInstance is a key for the context value of the PrometheusHolder
 const PrometheusInstance key = 0
+
 // RouterInstance is the key for the goilla/mux router instance in the context
 const RouterInstance key = 1
+
 // RequestTimer is the key for the request timer in context
 const RequestTimer key = 2
 
@@ -45,6 +47,7 @@ var controllerAddr string
 
 // FlagMissyControllerAddressDefault is a default for the missy-controller url used in the during service initialisation when given the init flag
 const FlagMissyControllerAddressDefault = "http://missy-controller"
+
 // FlagMissyControllerUsage is a usage message for the missy-controller url used in the during service initialisation when given the init flag
 const FlagMissyControllerUsage = "The address of the MiSSy controller"
 

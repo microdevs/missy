@@ -1,10 +1,10 @@
 package service
 
 import (
+	"fmt"
 	"github.com/gorilla/context"
 	"github.com/microdevs/missy/log"
 	"net/http"
-	"fmt"
 )
 
 // StartTimerHandler is a middleware to start a timer for the request benchmark
