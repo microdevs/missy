@@ -5,12 +5,14 @@ import (
 	"net/http"
 )
 
+// Instance interface
 type Instance interface {
 	Connection() (interface{}, error)
 	Setup(c *config.Config)
 	Initialize(r *http.Request)
 }
 
+// Setup calls Setup() functions on all registered resources
 func Setup(c *config.Config) {
 	for _, r := range c.Resources {
 		switch r {

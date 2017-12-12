@@ -37,3 +37,7 @@
   # no master branch
   branch = "v2"
   name = "gopkg.in/yaml.v2"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/go-sql-driver/mysql"

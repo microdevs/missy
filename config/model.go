@@ -4,7 +4,7 @@ package config
 type Config struct {
 	Name        string         `yaml:"name"`
 	Environment []EnvParameter `yaml:"environment,flow,omitempty"`
-	Resources 	[]string `yaml:"resources,omitempty"`
+	Resources   []string       `yaml:"resources,omitempty"`
 }
 
 // EnvParameter defines how a config value is passed through an environment variable. This struct as members for
@@ -19,9 +19,10 @@ type EnvParameter struct {
 	Usage        string `yaml:"usage"`
 	Value        string `yaml:"value,omitempty"`
 }
-// tests if resource is configured in config. We assume that this resource is then available
+
+// ResourceAvailable tests if resource is configured in config. We assume that this resource is then available
 func (c *Config) ResourceAvailable(test string) bool {
-	for _,v := range c.Resources {
+	for _, v := range c.Resources {
 		if v == test {
 			return true
 		}

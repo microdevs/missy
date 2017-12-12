@@ -2,18 +2,21 @@ package resource
 
 import (
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 	"fmt"
+	// blank import for mysql driver
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
 	"sync"
 )
 
+// MysqlResourceName is the name of the resource type MySQL
 const MysqlResourceName = "mysql"
 
 var mysqlInstance *Mysql
 var once sync.Once
 
+// Mysql is a type that holds the current active connection and its properties
 type Mysql struct {
 	Username         string
 	Password         string
@@ -23,6 +26,7 @@ type Mysql struct {
 	ActiveConnection *sql.DB
 }
 
+// MysqlConnection returns the active connection of the Mysql type above
 func MysqlConnection() *sql.DB {
 
 	if !config.GetInstance().ResourceAvailable(MysqlResourceName) {
@@ -34,9 +38,9 @@ func MysqlConnection() *sql.DB {
 		mysql := Mysql{
 			Username: config.Get("mysql.user"),
 			Password: config.Get("mysql.password"),
-			Db: config.Get("mysql.db"),
-			Host: config.Get("mysql.host"),
-			Port: config.Get("mysql.port"),
+			Db:       config.Get("mysql.db"),
+			Host:     config.Get("mysql.host"),
+			Port:     config.Get("mysql.port"),
 		}
 		connection, err := mysql.Connect()
 		if err != nil {
@@ -48,6 +52,7 @@ func MysqlConnection() *sql.DB {
 	return mysqlInstance.ActiveConnection
 }
 
+// Connect to the MySQL server
 func (r *Mysql) Connect() (*sql.DB, error) {
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", r.Username, r.Password, r.Host, r.Port, r.Db)
@@ -64,6 +69,7 @@ func (r *Mysql) Connect() (*sql.DB, error) {
 	return r.ActiveConnection, nil
 }
 
+// Setup adds the MySQL parameters to the service config
 func (r *Mysql) Setup(c *config.Config) {
 	user := config.EnvParameter{
 		EnvName:      "MYSQL_USER",
