@@ -10,12 +10,13 @@ import (
 	"syscall"
 )
 
+// MissyConfigFile holds the default config file name
 const MissyConfigFile = ".missy.yml"
 
 var config *Config
 var once sync.Once
 
-// return a signleton instance of service config
+// GetInstance returns a singleton instance of service config
 func GetInstance() *Config {
 
 	once.Do(func() {
@@ -34,7 +35,7 @@ func GetInstance() *Config {
 
 	return config
 }
-
+// Get is a shorthand of config.GetInstance.Get() and returns a value by internal name from the config object
 func Get(name string) string {
 	return GetInstance().Get(name)
 }
@@ -49,7 +50,7 @@ func readDefaultFile() ([]byte, error) {
 	return ioutil.ReadFile(MissyConfigFile)
 }
 
-// Parses all configured environment variables according to configuration to the internal names. Checks if values have
+// ParseEnv parses all configured environment variables according to configuration to the internal names. Checks if values have
 // been set and if not sets default values. If parameter is not set but mandatory this function will collect all missing
 // parameters in a list and exits the program with a usage message.
 func (c *Config) ParseEnv() {
@@ -86,7 +87,7 @@ func (c *Config) ParseEnv() {
 	}
 }
 
-// returns a value for a config parameter
+// Get returns a value for a config parameter
 func (c *Config) Get(internalName string) string {
 	// loop through all environment parameters and look for the internal name
 	// todo: enhance speed with an index if needed

@@ -8,10 +8,12 @@ import (
 
 var holder *PrometheusHolder
 
+// PrometheusHolder is holds an instances of globally and internally used Prometheus metrics
 type PrometheusHolder struct {
 	httpLatency *prometheus.SummaryVec
 }
 
+// NewPrometheus returns a new instance of a Prometheus holder to bind to a service
 func NewPrometheus(serviceName string) *PrometheusHolder {
 	if holder != nil {
 		return holder
@@ -34,6 +36,7 @@ func NewPrometheus(serviceName string) *PrometheusHolder {
 	return holder
 }
 
+// OnRequestFinished will measure the http latency for the respective call to a missy service endpoint
 func (p *PrometheusHolder) OnRequestFinished(method string, path string, statusCode int, processTimeMillis float64) {
 	p.httpLatency.WithLabelValues(method, path, strconv.Itoa(statusCode)).Observe(processTimeMillis)
 }

@@ -8,6 +8,7 @@ import (
 	"reflect"
 )
 
+// MarshalResponse will marshal any interface{} according to the Accept header of the passed request to JSON by default or XML if the header is set to text/xml
 func MarshalResponse(w http.ResponseWriter, r *http.Request, subject interface{}) ([]byte, error) {
 
 	var resp []byte
@@ -45,6 +46,7 @@ func MarshalResponse(w http.ResponseWriter, r *http.Request, subject interface{}
 	return resp, err
 }
 
+// Results is a wrapper type to wrap results in an XML <result> node
 type Results struct {
 	XMLName xml.Name `xml:"result"`
 	Results []interface{}
