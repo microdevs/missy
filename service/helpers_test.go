@@ -1,9 +1,9 @@
 package service
 
 import (
-	"testing"
 	"net/http"
 	"reflect"
+	"testing"
 )
 
 func TestVars(t *testing.T) {

@@ -4,6 +4,9 @@ before_install:
   - make ensure_dep
   - make ensure_coverall
 
+before_script:
+  - make check_gofmt
+
 script:
   - make tests_with_cover
   - make goveralls

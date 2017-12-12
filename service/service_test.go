@@ -1,16 +1,16 @@
 package service
 
 import (
-	"testing"
-	"reflect"
-	"syscall"
-	"net/http"
 	"bytes"
+	"github.com/microdevs/missy/config"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"reflect"
 	"regexp"
 	"strings"
-	"io/ioutil"
-	"github.com/microdevs/missy/config"
-	"os"
+	"syscall"
+	"testing"
 )
 
 func TestMain(m *testing.M) {
@@ -91,7 +91,7 @@ func TestServiceEndpoints(t *testing.T) {
 	buf.ReadFrom(response0.Body)
 	body0 := buf.Bytes()
 	exp := `^Name` + s.name + `\s*Uptime \d+\.\d{6}s|ms|µs`
-	matches, errInfoRegex := regexp.Match(exp,body0)
+	matches, errInfoRegex := regexp.Match(exp, body0)
 	if errInfoRegex != nil || matches == false {
 		t.Errorf("/info Response did not match expected response body, got %s, error: %v", string(body0), errInfoRegex)
 	}
@@ -116,8 +116,7 @@ func TestServiceEndpoints(t *testing.T) {
 	}
 	buf.ReadFrom(response2.Body)
 	if body2 := buf.String(); !strings.Contains(body2, "go_gc_duration_seconds") {
-		t.Errorf("/metrics returned unexpedted output, got\n%s",body2)
+		t.Errorf("/metrics returned unexpedted output, got\n%s", body2)
 	}
-
 
 }

@@ -12,7 +12,7 @@ type Constructor func(Handler) Handler
 // the same set of constructors in the same order.
 type Chain struct {
 	constructors []Constructor
-	finalFunc Constructor
+	finalFunc    Constructor
 }
 
 // New creates a new chain,

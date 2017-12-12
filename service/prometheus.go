@@ -9,11 +9,11 @@ import (
 var holder *PrometheusHolder
 
 type PrometheusHolder struct {
-	httpLatency         *prometheus.SummaryVec
+	httpLatency *prometheus.SummaryVec
 }
 
 func NewPrometheus(serviceName string) *PrometheusHolder {
-	if (holder != nil) {
+	if holder != nil {
 		return holder
 	}
 
@@ -29,7 +29,7 @@ func NewPrometheus(serviceName string) *PrometheusHolder {
 	prometheus.MustRegister(httpLatency)
 
 	holder = &PrometheusHolder{
-		httpLatency : httpLatency,
+		httpLatency: httpLatency,
 	}
 	return holder
 }
@@ -37,6 +37,3 @@ func NewPrometheus(serviceName string) *PrometheusHolder {
 func (p *PrometheusHolder) OnRequestFinished(method string, path string, statusCode int, processTimeMillis float64) {
 	p.httpLatency.WithLabelValues(method, path, strconv.Itoa(statusCode)).Observe(processTimeMillis)
 }
-
-
-
