@@ -48,8 +48,6 @@ func MarshalResponse(w http.ResponseWriter, r *http.Request, subject interface{}
 		log.Errorf("Error marshalling to %s: %v", convertTo, err)
 	}
 
-	w.Write(resp)
-
 	return resp, err
 }
 
