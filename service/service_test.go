@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -56,8 +55,8 @@ func TestNewService(t *testing.T) {
 func TestNewServiceWithDifferentHostPort(t *testing.T) {
 	testhost := "devil.hell"
 	testport := "666"
-	syscall.Setenv("LISTEN_HOST", testhost)
-	syscall.Setenv("LISTEN_PORT", testport)
+	os.Setenv("LISTEN_HOST", testhost)
+	os.Setenv("LISTEN_PORT", testport)
 
 	s := New()
 
