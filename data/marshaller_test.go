@@ -31,7 +31,7 @@ func TestMarshalToJson(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	resp, err := MarshalResponse(rec, request, subject)
+	resp, err := Marshal(rec, request, subject)
 
 	if err != nil {
 		t.Errorf("Failed to call marshalling function with error %s", err)
@@ -59,7 +59,7 @@ func TestMarshalToXML(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	resp, err := MarshalResponse(rec, request, subject)
+	resp, err := Marshal(rec, request, subject)
 
 	if err != nil {
 		t.Errorf("Failed to call marshalling function with error %s", err)

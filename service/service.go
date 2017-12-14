@@ -10,13 +10,11 @@ import (
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/microdevs/missy/config"
-	"github.com/microdevs/missy/data"
 	"github.com/microdevs/missy/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"time"
 )
 
@@ -140,34 +138,21 @@ func (s *Service) prepareBeforeStart() {
 }
 
 // HandleFunc wrapper with token validation, logging recovery and metrics
-func (s *Service) HandleFunc(pattern string, handler func(*ResponseWriter, *http.Request)) *mux.Route {
-	h := func(originalResponseWriter http.ResponseWriter, r *http.Request) {
+func (s *Service) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
+	return s.Handle(pattern, http.HandlerFunc(handler))
+}
+
+// Handle
+func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Route {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// build context
 		gctx.Set(r, PrometheusInstance, s.Prometheus)
 		gctx.Set(r, RouterInstance, s.Router)
-		// use our response writer
-		w := &ResponseWriter{originalResponseWriter, http.StatusOK}
 		// call custom handler
-		handleFunc := HandlerFunc(handler)
-		chain := NewChain(StartTimerHandler, AccessLogHandler).Final(StopTimerHandler).Then(handleFunc)
+		chain := NewChain(StartTimerHandler, AccessLogHandler).Final(StopTimerHandler).Then(originalHandler)
 		chain.ServeHTTP(w, r)
-
-	}
-	return s.Router.HandleFunc(pattern, h)
-}
-
-// finalizeRequest
-func (s Service) finalizeRequest(w *ResponseWriter, r *http.Request, timer *Timer) {
-	if err := recover(); err != nil {
-		stack := make([]byte, 1024*8)
-		stack = stack[:runtime.Stack(stack, false)]
-		log.Error("PANIC: %s\n%s", err, stack)
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		w.Status = http.StatusInternalServerError
-	}
-	s.Prometheus.OnRequestFinished(r.Method, r.URL.Path, w.Status, timer.durationMillis())
-	// access log
-	log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.Status, r.UserAgent())
+	})
+	return s.Router.Handle(pattern, h)
 }
 
 // ResponseWriter is the MiSSy owned response writer object
@@ -182,33 +167,12 @@ func (w *ResponseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-// Marshal an object to json or xml according the request Accept header
-func (w *ResponseWriter) Marshal(r *http.Request, subject interface{}) {
-	resp, err := data.MarshalResponse(w, r, subject)
-
-	if err != nil {
-		http.Error(w, "Unexpected Error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(resp)
+// ResponseWriter wrapper for http.ResponseWriter interface
+func (w *ResponseWriter) Write(b []byte) (int, error) {
+	return w.ResponseWriter.Write(b)
 }
 
-// Error adds a shorthand to the http.Error function
-func (w *ResponseWriter) Error(error string, code int) {
-	http.Error(w, error, code)
-	w.Status = code
-}
-
-// HandlerFunc provides MiSSys own handler func
-type HandlerFunc func(*ResponseWriter, *http.Request)
-
-// ServeHTTP calls f(w, r)
-func (f HandlerFunc) ServeHTTP(w *ResponseWriter, r *http.Request) {
-	f(w, r)
-}
-
-// Handler MiSSy's own Handler interface taking the custom ResponseWriter
-type Handler interface {
-	ServeHTTP(w *ResponseWriter, r *http.Request)
+// Header wrapper for http.ResponseWriter interface
+func (w *ResponseWriter) Header() http.Header {
+	return w.ResponseWriter.Header()
 }
