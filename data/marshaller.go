@@ -3,10 +3,10 @@ package data
 import (
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"github.com/microdevs/missy/log"
 	"net/http"
 	"reflect"
-	"fmt"
 )
 
 const httpHeaderAccept = "Accept"
@@ -51,10 +51,10 @@ func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
 
 	if err != nil {
 		log.Errorf("Error marshalling to %s: %v", convertTo, err)
-		http.Error(w,fmt.Sprintf("Error marshalling object to %s: %s", convertTo, err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error marshalling object to %s: %s", convertTo, err), http.StatusInternalServerError)
 	}
 
-	http.Error(w,"Unknown error during marshalling response object", http.StatusInternalServerError)
+	http.Error(w, "Unknown error during marshalling response object", http.StatusInternalServerError)
 }
 
 // Results is a wrapper type to wrap results in an XML <result> node
