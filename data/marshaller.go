@@ -6,6 +6,7 @@ import (
 	"github.com/microdevs/missy/log"
 	"net/http"
 	"reflect"
+	"fmt"
 )
 
 const httpHeaderAccept = "Accept"
@@ -14,7 +15,7 @@ const contentTypeJSON = "application/json"
 const contentTypeXML = "text/xml"
 
 // Marshal will marshal any interface{} according to the Accept header of the passed request to JSON by default or XML if the header is set to text/xml
-func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) ([]byte, error) {
+func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
 
 	var resp []byte
 	var err error
@@ -38,17 +39,22 @@ func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) ([]byt
 		}
 
 		w.Header().Set(httpHeaderContentType, contentTypeXML)
+		w.Write(resp)
+		return
 	} else {
 		convertTo = "json"
 		resp, err = json.Marshal(subject)
 		w.Header().Set(httpHeaderContentType, contentTypeJSON)
+		w.Write(resp)
+		return
 	}
 
 	if err != nil {
 		log.Errorf("Error marshalling to %s: %v", convertTo, err)
+		http.Error(w,fmt.Sprintf("Error marshalling object to %s: %s", convertTo, err), http.StatusInternalServerError)
 	}
 
-	return resp, err
+	http.Error(w,"Unknown error during marshalling response object", http.StatusInternalServerError)
 }
 
 // Results is a wrapper type to wrap results in an XML <result> node

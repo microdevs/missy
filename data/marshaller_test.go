@@ -1,6 +1,7 @@
 package data
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,10 +32,10 @@ func TestMarshalToJson(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	resp, err := Marshal(rec, request, subject)
+	Marshal(rec, request, subject)
 
-	if err != nil {
-		t.Errorf("Failed to call marshalling function with error %s", err)
+	if rec.Code != http.StatusOK {
+		t.Errorf("Marshaller failed with an unknown error")
 	}
 
 	response := rec.Result()
@@ -42,9 +43,9 @@ func TestMarshalToJson(t *testing.T) {
 	if ct := response.Header.Get(httpHeaderContentType); ct != contentTypeJSON {
 		t.Errorf("Accept header has the wrong content type. Expected %s, actual %s", contentTypeJSON, ct)
 	}
-
-	if strbody := string(resp); strbody != expectedJSON {
-		t.Errorf("Body does not match expected output. Expected %s, actual %s", expectedJSON, strbody)
+	bodyBytes, _ := ioutil.ReadAll(rec.Body)
+	if strBody := string(bodyBytes); strBody != expectedJSON {
+		t.Errorf("Body does not match expected output. Expected %s, actual %s", expectedJSON, strBody)
 	}
 
 }
@@ -59,20 +60,20 @@ func TestMarshalToXML(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	resp, err := Marshal(rec, request, subject)
-
-	if err != nil {
-		t.Errorf("Failed to call marshalling function with error %s", err)
-	}
+	Marshal(rec, request, subject)
 
 	response := rec.Result()
+
+	if rec.Code != http.StatusOK {
+		t.Error("Marshaller failed with an unknown error")
+	}
 
 	if ct := response.Header.Get(httpHeaderContentType); ct != contentTypeXML {
 		t.Errorf("Accept header has the wrong content type. Expected %s, actual %s", contentTypeXML, ct)
 	}
-
-	if strbody := string(resp); strbody != expectedXML {
-		t.Errorf("Body does not match expected output. Expected %s, actual %s", expectedXML, strbody)
+	bodyBytes, _ := ioutil.ReadAll(rec.Body)
+	if strBody := string(bodyBytes); strBody != expectedXML {
+		t.Errorf("Body does not match expected output. Expected %s, actual %s", expectedXML, strBody)
 	}
 
 }
