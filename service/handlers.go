@@ -8,28 +8,30 @@ import (
 )
 
 // StartTimerHandler is a middleware to start a timer for the request benchmark
-func StartTimerHandler(h Handler) Handler {
-	return HandlerFunc(func(w *ResponseWriter, r *http.Request) {
+func StartTimerHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		context.Set(r, RequestTimer, NewTimer())
 		h.ServeHTTP(w, r)
 	})
 }
 
 // AccessLogHandler writes an acccess logon after the response has been sent
-func AccessLogHandler(h Handler) Handler {
-	return HandlerFunc(func(w *ResponseWriter, r *http.Request) {
-		log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, w.Status, r.UserAgent())
-		h.ServeHTTP(w, r)
+func AccessLogHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mw := &ResponseWriter{w, http.StatusOK}
+		h.ServeHTTP(mw, r)
+		log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, mw.Status, r.UserAgent())
 	})
 }
 
 // StopTimerHandler measures the time of the request with the help of the timestamp taken in StartTimerHandler and writes it to a Prometheus metric
-func StopTimerHandler(h Handler) Handler {
-	return HandlerFunc(func(w *ResponseWriter, r *http.Request) {
-		h.ServeHTTP(w, r)
+func StopTimerHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mw := &ResponseWriter{w, http.StatusOK}
+		h.ServeHTTP(mw, r)
 		timer := context.Get(r, RequestTimer).(*Timer)
 		prometheus := context.Get(r, PrometheusInstance).(*PrometheusHolder)
-		prometheus.OnRequestFinished(r.Method, r.URL.Path, w.Status, timer.durationMillis())
+		prometheus.OnRequestFinished(r.Method, r.URL.Path, mw.Status, timer.durationMillis())
 	})
 }
 
