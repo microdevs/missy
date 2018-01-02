@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"github.com/go-playground/locales/mg"
 	"github.com/microdevs/missy/config"
 	"net/http"
 )
