@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"github.com/go-playground/locales/mg"
 	"github.com/microdevs/missy/config"
 	"net/http"
 )
@@ -19,6 +20,9 @@ func Setup(c *config.Config) {
 		case MysqlResourceName:
 			my := Mysql{}
 			my.Setup(c)
+		case MgoResourceName:
+			mg := MgoDb{}
+			mg.Setup(c)
 		}
 	}
 }
