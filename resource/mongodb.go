@@ -38,7 +38,7 @@ func MgoSession() *mgo.Session {
 	})
 
 	// Do not forget to close it.
-	return mgoInstance.Session.Clone()
+	return mgoInstance.Session
 }
 
 func (r *MgoDb) Setup(c *config.Config) {
