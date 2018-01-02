@@ -28,8 +28,6 @@ func GetInstance() *Config {
 		if parseErr != nil {
 			log.Fatalf("Cannot parse config file %s with error: \"%s\"", MissyConfigFile, parseErr)
 		}
-
-		config.ParseEnv()
 	})
 
 	return config
@@ -104,4 +102,12 @@ func (c *Config) Get(internalName string) string {
 	}
 	log.Warnf("You're trying to get unknown config value: %s", internalName)
 	return ""
+}
+
+// AddEnv allow it to add an env parameter from code
+func (c *Config) AddEnv(params ...EnvParameter) *Config {
+	for _, p := range params {
+		c.Environment = append(c.Environment, p)
+	}
+	return c
 }

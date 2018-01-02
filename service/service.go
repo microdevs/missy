@@ -1,4 +1,3 @@
-//Package service contains the logic to build a HTTP/Rest Service for the MiSSy runtime environment
 package service
 
 import (
@@ -11,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
+	"github.com/microdevs/missy/resource"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
@@ -87,6 +87,8 @@ func New() *Service {
 	}
 
 	c := config.GetInstance()
+	resource.Setup(c)
+	c.ParseEnv()
 
 	return &Service{
 		name:       c.Name,
