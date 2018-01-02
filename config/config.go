@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"sync"
-	"syscall"
 )
 
 // MissyConfigFile holds the default config file name
@@ -57,7 +56,7 @@ func (c *Config) ParseEnv() {
 	var failedParameters []EnvParameter
 	// loop through registered parameters and try to find them in env
 	for k, parameter := range config.Environment {
-		envValue, found := syscall.Getenv(parameter.EnvName)
+		envValue, found := os.LookupEnv(parameter.EnvName)
 		// if mandatory but not found add them to error list
 		if found == false && parameter.Mandatory == true {
 			failedParameters = append(failedParameters, parameter)

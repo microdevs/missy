@@ -1,11 +1,13 @@
 package service
 
+import "net/http"
+
 // Chains provide a convenient way to chain http handlers.
 
 // Constructor for a piece of middleware.
 // Some middleware use this constructor out of the box,
 // so in most cases you can just pass somepackage.New
-type Constructor func(Handler) Handler
+type Constructor func(http.Handler) http.Handler
 
 // Chain acts as a list of http.Handler constructors.
 // Chain is effectively immutable:
@@ -48,7 +50,7 @@ func (c *Chain) Final(ff Constructor) *Chain {
 // For proper middleware, this should cause no problems.
 //
 // Then() treats nil as http.DefaultServeMux.
-func (c Chain) Then(h Handler) Handler {
+func (c Chain) Then(h http.Handler) http.Handler {
 
 	for i := range c.constructors {
 		h = c.constructors[len(c.constructors)-1-i](h)
@@ -68,7 +70,7 @@ func (c Chain) Then(h Handler) Handler {
 //     c.ThenFunc(fn)
 //
 // ThenFunc provides all the guarantees of Then.
-func (c Chain) ThenFunc(fn Handler) Handler {
+func (c Chain) ThenFunc(fn http.Handler) http.Handler {
 	if fn == nil {
 		return c.Then(nil)
 	}
