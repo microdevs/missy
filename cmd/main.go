@@ -40,7 +40,7 @@ func main() {
 
 		vaultServicePorts := []apiv1.ServicePort{
 			{
-				Name: "http"
+				Name:     "http",
 				Protocol: apiv1.ProtocolTCP,
 				Port:     80,
 				TargetPort: intstr.IntOrString{
@@ -52,61 +52,62 @@ func main() {
 		deploy("vault", "vault-server", "vault:0.9.0", vaultContainerPorts, vaultServicePorts, "missy", kubeconfig)
 		// pull up some datastore
 
-	consulContainerPorts := []apiv1.ContainerPort{
-		{
-			Name:          "ui-port",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8500,
-		},
-		{
-			Name:          "alt-port",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8400,
-		},
-		{
-			Name:          "https-port",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8443,
-		},
-		{
-			Name:          "http-port",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8080,
-		},
-		{
-			Name:          "https-port",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8443,
-		},
-		{
-			Name:          "udp-port",
-			Protocol:      apiv1.ProtocolUDP,
-			ContainerPort: 53,
-		},
-		{
-			Name:          "serflan",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8301,
-		},
-		{
-			Name:          "serfwan",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8302,
-		},
-		{
-			Name:          "consuldns",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8600,
-		},
-		{
-			Name:          "server",
-			Protocol:      apiv1.ProtocolTCP,
-			ContainerPort: 8300,
-		},
-	}
+		consulContainerPorts := []apiv1.ContainerPort{
+			{
+				Name:          "ui-port",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8500,
+			},
+			{
+				Name:          "alt-port",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8400,
+			},
+			{
+				Name:          "https-port",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8443,
+			},
+			{
+				Name:          "http-port",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8080,
+			},
+			{
+				Name:          "https-port",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8443,
+			},
+			{
+				Name:          "udp-port",
+				Protocol:      apiv1.ProtocolUDP,
+				ContainerPort: 53,
+			},
+			{
+				Name:          "serflan",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8301,
+			},
+			{
+				Name:          "serfwan",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8302,
+			},
+			{
+				Name:          "consuldns",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8600,
+			},
+			{
+				Name:          "server",
+				Protocol:      apiv1.ProtocolTCP,
+				ContainerPort: 8300,
+			},
+		}
 
+		consulServicePorts := []apiv1.ContainerPort{}
 
-		deploy("consul", "consul-server", "", consulContainerPorts)
+		deploy("consul", "consul-server", "consul", consulContainerPorts, consulServicePorts, "missy", kubeconfig)
 		// pull up missy-controller
 	}
 	os.Exit(0)
@@ -175,7 +176,7 @@ func deploy(name string, appName string, image string, containerPorts []apiv1.Co
 			},
 		},
 		Spec: apiv1.ServiceSpec{
-			Type: apiv1.ServiceTypeClusterIP,
+			Type:  apiv1.ServiceTypeClusterIP,
 			Ports: servicePorts,
 			Selector: map[string]string{
 				"name": name,
