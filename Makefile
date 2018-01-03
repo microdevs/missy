@@ -37,7 +37,7 @@ goveralls: ensure_coverall
 	goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $(COVERALLS_TOKEN)
 
 minikube_init: guard_on_minikube
-	echo "www!"
+	go run cmd/main.go init
 
 guard_on_minikube:
 	@ if [ ! "$$(kubectl config current-context)" = "minikube" ]; then  \
