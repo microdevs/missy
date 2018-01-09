@@ -74,11 +74,6 @@ func main() {
 				ContainerPort: 8080,
 			},
 			{
-				Name:          "https-port",
-				Protocol:      apiv1.ProtocolTCP,
-				ContainerPort: 8443,
-			},
-			{
 				Name:          "udp-port",
 				Protocol:      apiv1.ProtocolUDP,
 				ContainerPort: 53,
@@ -105,7 +100,17 @@ func main() {
 			},
 		}
 
-		consulServicePorts := []apiv1.ContainerPort{}
+		consulServicePorts := []apiv1.ServicePort{
+			{
+				Name:     "ui-port",
+				Protocol: apiv1.ProtocolTCP,
+				Port:     8500,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: 8500,
+				},
+			},
+		}
 
 		deploy("consul", "consul-server", "consul", consulContainerPorts, consulServicePorts, "missy", kubeconfig)
 		// pull up missy-controller
