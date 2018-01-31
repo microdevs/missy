@@ -123,3 +123,26 @@ func TestServiceEndpoints(t *testing.T) {
 	}
 
 }
+
+func TestFailingHandler(t *testing.T) {
+	s := New()
+	s.Host = "localhost"
+	s.Port = "8089"
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		panic("Aargh!")
+	}
+
+	s.HandleFunc("/", handler)
+
+	go s.Start()
+
+	// sleep a bit to wait for the server to start
+	time.Sleep(100 * time.Millisecond)
+
+	resp, _ := http.Get("http://localhost:8089")
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("Expected 500, got %v\n", resp.StatusCode)
+	}
+}
