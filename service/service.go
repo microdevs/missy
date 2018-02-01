@@ -129,6 +129,7 @@ func (s *Service) Start() {
 	log.Infof("Service stopped gracefully.")
 }
 
+// Shutdown allows to stop the HTTP Server gracefully
 func (s *Service) Shutdown() {
 	s.Stop <- os.Signal(os.Interrupt)
 }
@@ -143,12 +144,12 @@ func (s *Service) prepareBeforeStart() {
 	http.Handle("/", s.Router)
 }
 
-// HandleFunc wrapper with token validation, logging recovery and metrics
+// HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
 func (s *Service) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
 	return s.Handle(pattern, http.HandlerFunc(handler))
 }
 
-// Handle
+// Handle is a wrapper around the original Go handle func with logging recovery and metrics
 func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Route {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
