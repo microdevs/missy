@@ -20,6 +20,8 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+var s *Service
+
 func setup() {
 	var yml = []byte(`
 name: test
@@ -36,6 +38,23 @@ environment:
     usage: "This is the description for ENVVAR_B"
 `)
 	ioutil.WriteFile(config.MissyConfigFile, yml, os.FileMode(0644))
+
+	testhost := "localhost"
+	testport := "8089"
+
+	s = New()
+	s.Host = testhost
+	s.Port = testport
+
+	s.HandleFunc("/die", func(w http.ResponseWriter, r *http.Request) {
+		panic("Aargh!")
+	})
+
+	go s.Start()
+
+	// sleep a bit to wait for the server to start
+	time.Sleep(100 * time.Millisecond)
+
 }
 
 func tearDown() {
@@ -71,14 +90,6 @@ func TestNewServiceWithDifferentHostPort(t *testing.T) {
 
 func TestServiceEndpoints(t *testing.T) {
 	buf := new(bytes.Buffer)
-	testhost := "localhost"
-	testport := "8089"
-
-	s := New()
-	s.Host = testhost
-	s.Port = testport
-	go s.Start()
-
 	// sleep a bit to wait for the server to start
 	time.Sleep(100 * time.Millisecond)
 
@@ -121,26 +132,11 @@ func TestServiceEndpoints(t *testing.T) {
 	if body2 := buf.String(); !strings.Contains(body2, "go_gc_duration_seconds") {
 		t.Errorf("/metrics returned unexpedted output, got\n%s", body2)
 	}
-
 }
 
 func TestFailingHandler(t *testing.T) {
-	s := New()
-	s.Host = "localhost"
-	s.Port = "8089"
 
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		panic("Aargh!")
-	}
-
-	s.HandleFunc("/", handler)
-
-	go s.Start()
-
-	// sleep a bit to wait for the server to start
-	time.Sleep(100 * time.Millisecond)
-
-	resp, _ := http.Get("http://localhost:8089")
+	resp, _ := http.Get("http://localhost:8089/die")
 
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Errorf("Expected 500, got %v\n", resp.StatusCode)
