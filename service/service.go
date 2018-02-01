@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 )
 
@@ -37,6 +38,7 @@ type Service struct {
 	Prometheus *PrometheusHolder
 	timer      *Timer
 	Router     *mux.Router
+	Stop       chan os.Signal
 }
 
 var listenPort = "8080"
@@ -99,8 +101,8 @@ func New() *Service {
 // Start starts the http server
 func (s *Service) Start() {
 	// Open a channel to capture ^C signal
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
+	s.Stop = make(chan os.Signal, 1)
+	signal.Notify(s.Stop, os.Interrupt)
 	// start the server
 	log.Infof("Starting service %s listening on %s:%s ...", s.name, s.Host, s.Port)
 	s.prepareBeforeStart()
@@ -116,8 +118,8 @@ func (s *Service) Start() {
 	}()
 
 	//wait for SIGTERM
-	<-stop
-	// we linebreak here just to get the log message pringted nicely
+	<-s.Stop
+	// we linebreak here just to get the log message printed nicely
 	fmt.Print("\n")
 	log.Warnf("Service shutting down...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -125,6 +127,11 @@ func (s *Service) Start() {
 	//TODO: build some connection drainer for websockets
 	h.Shutdown(ctx)
 	log.Infof("Service stopped gracefully.")
+}
+
+// Shutdown allows to stop the HTTP Server gracefully
+func (s *Service) Shutdown() {
+	s.Stop <- os.Signal(os.Interrupt)
 }
 
 // prepareBeforeStart sets up the standard handlers
@@ -137,14 +144,22 @@ func (s *Service) prepareBeforeStart() {
 	http.Handle("/", s.Router)
 }
 
-// HandleFunc wrapper with token validation, logging recovery and metrics
+// HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
 func (s *Service) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
 	return s.Handle(pattern, http.HandlerFunc(handler))
 }
 
-// Handle
+// Handle is a wrapper around the original Go handle func with logging recovery and metrics
 func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Route {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				stack := make([]byte, 1024*8)
+				stack = stack[:runtime.Stack(stack, false)]
+				log.Errorf("PANIC: %s\n%s", err, stack)
+				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
 		// build context
 		gctx.Set(r, PrometheusInstance, s.Prometheus)
 		gctx.Set(r, RouterInstance, s.Router)
