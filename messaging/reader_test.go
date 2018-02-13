@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
 )
 
 func TestNewReader(t *testing.T) {
@@ -20,7 +21,7 @@ func TestNewReader(t *testing.T) {
 
 }
 
-func TestReaderRead(t *testing.T) {
+func TestReaderReadSuccess(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	brokerReaderMock := NewMockBrokerReader(mockCtrl)
 	msg := &Message{Topic: "test", Key: []byte("key"), Value: []byte("value"), Partition: 0, Offset: 0}
@@ -49,6 +50,57 @@ func TestReaderRead(t *testing.T) {
 
 	if err == nil {
 		t.Errorf("error during read function expected, bacause readFunc is set!")
+	}
+
+	time.Sleep(time.Nanosecond)
+}
+
+func TestReaderReadErrorOnFetch(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	brokerReaderMock := NewMockBrokerReader(mockCtrl)
+	msg := &Message{Topic: "test", Key: []byte("key"), Value: []byte("value"), Partition: 0, Offset: 0}
+	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).Return(*msg, errors.New("ferch error"))
+	brokerReaderMock.EXPECT().Close().Return(nil)
+
+	reader := missyReader{brokerReader: brokerReaderMock}
+
+	readFunc := func(msg Message) error {
+		if msg.Topic != "test" {
+			t.Error(expected(msg.Topic, "test"))
+		}
+		return nil
+	}
+
+	closer, err := reader.Read(readFunc)
+
+	defer closer.Close()
+
+	if err != nil {
+		t.Errorf("error during read function unexpected!")
+	}
+
+	time.Sleep(time.Nanosecond)
+}
+
+func TestReaderReadErrorOnReadFunc(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	brokerReaderMock := NewMockBrokerReader(mockCtrl)
+	msg := &Message{Topic: "test", Key: []byte("key"), Value: []byte("value"), Partition: 0, Offset: 0}
+	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).Return(*msg, nil)
+	brokerReaderMock.EXPECT().Close().Return(nil)
+
+	reader := missyReader{brokerReader: brokerReaderMock}
+
+	readFunc := func(msg Message) error {
+		return errors.New("error")
+	}
+
+	closer, err := reader.Read(readFunc)
+
+	defer closer.Close()
+
+	if err != nil {
+		t.Errorf("error during read function unexpected!")
 	}
 
 	time.Sleep(time.Nanosecond)
