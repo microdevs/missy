@@ -37,3 +37,16 @@
   # no master branch
   branch = "v2"
   name = "gopkg.in/yaml.v2"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/segmentio/kafka-go"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/golang/mock"
+  #version = "1.2.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/bouk/monkey"
