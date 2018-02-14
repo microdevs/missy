@@ -23,7 +23,6 @@ type BrokerWriter interface {
 // missyWriter used as a default missy Writer implementation
 type missyWriter struct {
 	brokers      []string
-	groupID      string
 	topic        string
 	brokerWriter BrokerWriter
 }
@@ -53,7 +52,7 @@ func (wb *writeBroker) Close() error {
 
 // NewWriter based on brokers hosts, consumerGroup and topic. You need to close it after use. (Close())
 // we are leaving using the missy config for now, because we don't know how we want to configure this yet.
-func NewWriter(brokers []string, groupID string, topic string) Writer {
+func NewWriter(brokers []string, topic string) Writer {
 
 	// kafka writer
 	w := kafka.NewWriter(kafka.WriterConfig{
@@ -62,7 +61,7 @@ func NewWriter(brokers []string, groupID string, topic string) Writer {
 		Balancer: &kafka.LeastBytes{},
 	})
 
-	return &missyWriter{brokers: brokers, groupID: groupID, topic: topic, brokerWriter: &writeBroker{w}}
+	return &missyWriter{brokers: brokers, topic: topic, brokerWriter: &writeBroker{w}}
 }
 
 // Write new message

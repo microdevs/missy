@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewWriter(t *testing.T) {
-	r := NewWriter([]string{"localhost:9091"}, "", "test")
+	r := NewWriter([]string{"localhost:9091"}, "test")
 
 	writerType := reflect.TypeOf((*Writer)(nil)).Elem()
 

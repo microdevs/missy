@@ -57,15 +57,13 @@ func TestReader_ReadSuccess(t *testing.T) {
 		return nil
 	}
 
-	closer, err := reader.Read(readFunc)
-
-	defer closer.Close()
+	err := reader.Read(readFunc)
 
 	if err != nil {
 		t.Errorf("error during read function unexpected!")
 	}
 
-	_, err = reader.Read(readFunc)
+	err = reader.Read(readFunc)
 
 	if err == nil {
 		t.Errorf("error during read function expected, bacause readFunc is set!")
@@ -103,9 +101,7 @@ func TestReader_ReadErrorOnFetch(t *testing.T) {
 		return nil
 	}
 
-	closer, err := reader.Read(readFunc)
-
-	defer closer.Close()
+	err := reader.Read(readFunc)
 
 	if err != nil {
 		t.Errorf("error during read function unexpected!")
@@ -121,7 +117,6 @@ func TestMissyReader_ReadErrorOnCommit(t *testing.T) {
 	msg := &Message{Topic: "test", Key: []byte("key"), Value: []byte("value"), Partition: 0, Offset: 0}
 	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).AnyTimes().Return(*msg, nil)
 	brokerReaderMock.EXPECT().CommitMessages(gomock.Any(), *msg).AnyTimes().Return(errors.New("error"))
-	brokerReaderMock.EXPECT().Close().Return(nil)
 
 	reader := missyReader{brokerReader: brokerReaderMock}
 
@@ -144,9 +139,7 @@ func TestMissyReader_ReadErrorOnCommit(t *testing.T) {
 		return nil
 	}
 
-	closer, err := reader.Read(readFunc)
-
-	defer closer.Close()
+	err := reader.Read(readFunc)
 
 	if err != nil {
 		t.Errorf("error during read function unexpected!")
@@ -169,9 +162,7 @@ func TestMissyReader_ReadErrorOnReadFunc(t *testing.T) {
 		return errors.New("error")
 	}
 
-	closer, err := reader.Read(readFunc)
-
-	defer closer.Close()
+	err := reader.Read(readFunc)
 
 	if err != nil {
 		t.Errorf("error during read function unexpected!")

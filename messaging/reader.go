@@ -14,7 +14,8 @@ type ReadMessageFunc func(msg Message) error
 
 // Reader is used to read messages giving callback function
 type Reader interface {
-	Read(msgFunc ReadMessageFunc) (io.Closer, error)
+	Read(msgFunc ReadMessageFunc) error
+	io.Closer
 }
 
 // BrokerReader interface used for underlying broker implementation
@@ -96,10 +97,10 @@ func NewReader(brokers []string, groupID string, topic string) Reader {
 }
 
 // Read start reading goroutine that calls msgFunc on new message, you need to close it after use
-func (mr *missyReader) Read(msgFunc ReadMessageFunc) (io.Closer, error) {
+func (mr *missyReader) Read(msgFunc ReadMessageFunc) error {
 	// we've got a read function on this reader, return error
 	if mr.readFunc != nil {
-		return mr.brokerReader, errors.New("this reader is currently reading from underlying broker")
+		return errors.New("this reader is currently reading from underlying broker")
 	}
 
 	// set current read func
@@ -115,7 +116,7 @@ func (mr *missyReader) Read(msgFunc ReadMessageFunc) (io.Closer, error) {
 				break
 			}
 
-			log.Infof("# messaging # new message: [%v] %v/%v: %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+			log.Infof("# messaging # new message: [topic] %v; [part] %v; [offset] %v; %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
 			if err := msgFunc(m); err != nil {
 				log.Errorf("# messaging # cannot commit a message: %v", err)
 				continue
@@ -129,7 +130,7 @@ func (mr *missyReader) Read(msgFunc ReadMessageFunc) (io.Closer, error) {
 		}
 	}()
 
-	return mr.brokerReader, nil
+	return nil
 }
 
 // Close used to close underlying connection with broker
