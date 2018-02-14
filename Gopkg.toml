@@ -46,3 +46,7 @@
   branch = "master"
   name = "github.com/golang/mock"
   #version = "1.2.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/bouk/monkey"
