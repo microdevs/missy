@@ -9,7 +9,7 @@ before_script:
 
 script:
   - make tests_with_cover
-  - make goveralls
+  - COVERALLS_TOKEN=${COVERALLS_TOKEN} make goveralls
 
 notifications:
   slack:
