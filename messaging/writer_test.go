@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -85,9 +86,15 @@ func TestWriteBroker_WriteMessages(t *testing.T) {
 		Topic:   "test",
 	})
 
+	msgs := []Message{{Topic: "topic"}}
+
 	exec := false
 	// using monkey patching to patch underlying function call (https://github.com/bouk/monkey)
 	monkey.PatchInstanceMethod(reflect.TypeOf(kw), "WriteMessages", func(_ *kafka.Writer, ctx context.Context, messages ...kafka.Message) error {
+		if len(msgs) != len(messages) {
+			t.Error(fmt.Sprintf("invalid messages length: expected: %v, got %v", len(msgs), len(messages)))
+		}
+
 		exec = true
 		return nil
 	})
@@ -96,7 +103,7 @@ func TestWriteBroker_WriteMessages(t *testing.T) {
 
 	wb := writeBroker{kw}
 
-	if err := wb.WriteMessages(context.Background(), Message{}); err != nil {
+	if err := wb.WriteMessages(context.Background(), msgs...); err != nil {
 		t.Error("there is an unexpected error during WriteMessage call")
 	}
 
