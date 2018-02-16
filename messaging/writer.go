@@ -37,9 +37,9 @@ func (wb *writeBroker) WriteMessages(ctx context.Context, msgs ...Message) error
 
 	kafkaMessages := make([]kafka.Message, len(msgs))
 
-	for _, m := range msgs {
+	for i, m := range msgs {
 		kMessage := kafka.Message{Key: m.Key, Value: m.Value}
-		kafkaMessages = append(kafkaMessages, kMessage)
+		kafkaMessages[i] = kMessage
 	}
 
 	return wb.Writer.WriteMessages(ctx, kafkaMessages...)
