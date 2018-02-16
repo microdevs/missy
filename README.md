@@ -109,7 +109,8 @@ It uses kafka underneath.
 Example usage:
 
 Reader with brokers hosts, group-id and topic
-```
+
+```go
 reader := messaging.NewReader([]string{"localhost:9092"}, "group-id", "topic")
 err := reader.Read(func(msg Message) error{
     // do something with msg
@@ -122,7 +123,8 @@ defer reader.Close()
 ```
 
 Writer with brokers hosts and topic
-```
+
+```go
 writer := messaging.NewWriter([]string{"localhost:9092"}, "topic")
 err := writer.Write([]byte("key"), []byte("value"))
 
