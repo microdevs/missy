@@ -7,7 +7,6 @@ package messaging
 import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
-	io "io"
 	reflect "reflect"
 )
 
@@ -35,16 +34,27 @@ func (m *MockReader) EXPECT() *MockReaderMockRecorder {
 }
 
 // Read mocks base method
-func (m *MockReader) Read(msgFunc ReadMessageFunc) (io.Closer, error) {
+func (m *MockReader) Read(msgFunc ReadMessageFunc) error {
 	ret := m.ctrl.Call(m, "Read", msgFunc)
-	ret0, _ := ret[0].(io.Closer)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Read indicates an expected call of Read
 func (mr *MockReaderMockRecorder) Read(msgFunc interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockReader)(nil).Read), msgFunc)
+}
+
+// Close mocks base method
+func (m *MockReader) Close() error {
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close
+func (mr *MockReaderMockRecorder) Close() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockReader)(nil).Close))
 }
 
 // MockBrokerReader is a mock of BrokerReader interface
