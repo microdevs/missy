@@ -86,11 +86,12 @@ func (rm *readBroker) Close() error {
 func NewReader(brokers []string, groupID string, topic string) Reader {
 
 	kafkaReader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  brokers,
-		GroupID:  groupID,
-		Topic:    topic,
-		MinBytes: 10e3, // 10KB do we want it from config?
-		MaxBytes: 10e6, // 10MB do we want it frozm config?
+		Brokers:        brokers,
+		GroupID:        groupID,
+		Topic:          topic,
+		CommitInterval: 0,    // 0 indicates that commits should be done synchronically
+		MinBytes:       10e3, // 10KB do we want it from config?
+		MaxBytes:       10e6, // 10MB do we want it from config?
 	})
 
 	return &missyReader{brokers: brokers, groupID: groupID, topic: topic, brokerReader: &readBroker{kafkaReader}}
