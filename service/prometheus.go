@@ -10,7 +10,7 @@ var holder *PrometheusHolder
 
 // PrometheusHolder is holds an instances of globally and internally used Prometheus metrics
 type PrometheusHolder struct {
-	httpLatency *prometheus.SummaryVec
+	httpLatency *prometheus.HistogramVec
 }
 
 // NewPrometheus returns a new instance of a Prometheus holder to bind to a service
@@ -21,7 +21,7 @@ func NewPrometheus(serviceName string) *PrometheusHolder {
 
 	prefix := strings.Replace(serviceName, "-", "_", -1)
 
-	httpLatency := prometheus.NewSummaryVec(prometheus.SummaryOpts{
+	httpLatency := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: prefix + "_http_handler_latency",
 		Help: "HTTP Handler Latency by endpoint",
 	},
