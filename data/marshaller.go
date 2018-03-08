@@ -16,13 +16,12 @@ const contentTypeXML = "text/xml"
 
 // Marshal will marshal any interface{} according to the Accept header of the passed request to JSON by default or XML if the header is set to text/xml
 func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
-
-	var resp []byte
 	var err error
 	var convertTo string
 
 	if r.Header.Get(httpHeaderAccept) == contentTypeXML {
 		convertTo = "xml"
+		w.Header().Set(httpHeaderContentType, contentTypeXML)
 		// todo: if it's a pointer follow the pointer and use the data
 		if reflect.TypeOf(subject).Kind() == reflect.Slice {
 			s := reflect.ValueOf(subject)
@@ -33,28 +32,24 @@ func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
 			wrapper := Results{}
 			wrapper.Results = interfaceSlice
 			wrapper.Length = len(interfaceSlice)
-			resp, err = xml.Marshal(wrapper)
-		} else {
-			resp, err = xml.Marshal(subject)
-		}
 
-		w.Header().Set(httpHeaderContentType, contentTypeXML)
-		w.Write(resp)
-		return
+			err = xml.NewEncoder(w).Encode(wrapper)
+		} else {
+			err = xml.NewEncoder(w).Encode(subject)
+		}
 	} else {
 		convertTo = "json"
-		resp, err = json.Marshal(subject)
 		w.Header().Set(httpHeaderContentType, contentTypeJSON)
-		w.Write(resp)
-		return
+
+		err = json.NewEncoder(w).Encode(subject)
 	}
 
 	if err != nil {
 		log.Errorf("Error marshalling to %s: %v", convertTo, err)
+		// clean up content-type header set above on error
+		w.Header().Del(httpHeaderContentType)
 		http.Error(w, fmt.Sprintf("Error marshalling object to %s: %s", convertTo, err), http.StatusInternalServerError)
 	}
-
-	http.Error(w, "Unknown error during marshalling response object", http.StatusInternalServerError)
 }
 
 // Results is a wrapper type to wrap results in an XML <result> node
