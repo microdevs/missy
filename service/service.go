@@ -164,7 +164,7 @@ func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Rout
 		gctx.Set(r, PrometheusInstance, s.Prometheus)
 		gctx.Set(r, RouterInstance, s.Router)
 		// call custom handler
-		chain := NewChain(StartTimerHandler, AccessLogHandler).Final(StopTimerHandler).Then(originalHandler)
+		chain := NewChain(StartTimerHandler, AuthHandler, AccessLogHandler).Final(StopTimerHandler).Then(originalHandler)
 		chain.ServeHTTP(w, r)
 	})
 	return s.Router.Handle(pattern, h)

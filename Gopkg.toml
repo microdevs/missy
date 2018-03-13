@@ -50,3 +50,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/bouk/monkey"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/dgrijalva/jwt-go"
