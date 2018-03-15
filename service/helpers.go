@@ -1,10 +1,11 @@
 package service
 
 import (
+	"net/http"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
-	"net/http"
 )
 
 // Vars returns the gorilla/mux values from a request

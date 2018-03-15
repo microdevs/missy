@@ -2,7 +2,6 @@ package service
 
 import (
 	"bytes"
-	"github.com/microdevs/missy/config"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/microdevs/missy/config"
 )
 
 func runTestWithConfigFile(t *testing.T, f func(*testing.T)) {
@@ -36,7 +37,7 @@ environment:
 }
 
 func TestNewService(t *testing.T) {
-	runTestWithConfigFile(t, func(t *testing.T){
+	runTestWithConfigFile(t, func(t *testing.T) {
 		s := New()
 		if ty := reflect.TypeOf(s).String(); ty != "*service.Service" {
 			t.Errorf("New() did not return a Pointer to Service but %s", ty)
@@ -68,13 +69,13 @@ func TestNewServiceWithDifferentHostPort(t *testing.T) {
 }
 
 func TestInfoEndpoint(t *testing.T) {
-	runTestWithConfigFile(t,func(t *testing.T){
+	runTestWithConfigFile(t, func(t *testing.T) {
 		buf := new(bytes.Buffer)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "http://missy/info", nil)
 		// Test /info endpoint
 		s := New()
-		s.Router.ServeHTTP(w,r)
+		s.Router.ServeHTTP(w, r)
 		if w.Code != http.StatusOK {
 			t.Errorf("Error calling /info endpoint")
 		}
@@ -91,12 +92,12 @@ func TestInfoEndpoint(t *testing.T) {
 }
 
 func TestHealthEndpoint(t *testing.T) {
-	runTestWithConfigFile(t,func(t *testing.T){
+	runTestWithConfigFile(t, func(t *testing.T) {
 		buf := new(bytes.Buffer)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "http://missy/health", nil)
 		s := New()
-		s.Router.ServeHTTP(w,r)
+		s.Router.ServeHTTP(w, r)
 		if w.Code != http.StatusOK {
 			t.Errorf("Error calling /info endpoint")
 		}
@@ -111,7 +112,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestPrometheusEndpoint(t *testing.T) {
-	runTestWithConfigFile(t,func(t *testing.T) {
+	runTestWithConfigFile(t, func(t *testing.T) {
 		buf := new(bytes.Buffer)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "http://missy/metrics", nil)
@@ -130,7 +131,7 @@ func TestPrometheusEndpoint(t *testing.T) {
 }
 
 func TestFailingHandler(t *testing.T) {
-	runTestWithConfigFile(t, func(t *testing.T){
+	runTestWithConfigFile(t, func(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "http://missy.com/die", nil)
 		s := New()

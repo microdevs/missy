@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/microdevs/missy/log"
 	"net/http"
 	"reflect"
+
+	"github.com/microdevs/missy/log"
 )
 
 const httpHeaderAccept = "Accept"
@@ -41,20 +42,16 @@ func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
 		w.Header().Set(httpHeaderContentType, contentTypeXML)
 		w.Write(resp)
 		return
-	} else {
-		convertTo = "json"
-		resp, err = json.Marshal(subject)
-		w.Header().Set(httpHeaderContentType, contentTypeJSON)
-		w.Write(resp)
-		return
 	}
-
+	convertTo = "json"
+	resp, err = json.Marshal(subject)
 	if err != nil {
 		log.Errorf("Error marshalling to %s: %v", convertTo, err)
 		http.Error(w, fmt.Sprintf("Error marshalling object to %s: %s", convertTo, err), http.StatusInternalServerError)
 	}
 
-	http.Error(w, "Unknown error during marshalling response object", http.StatusInternalServerError)
+	w.Header().Set(httpHeaderContentType, contentTypeJSON)
+	w.Write(resp)
 }
 
 // Results is a wrapper type to wrap results in an XML <result> node

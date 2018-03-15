@@ -3,13 +3,14 @@ package service
 import (
 	"crypto/rsa"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
 	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
-	"io/ioutil"
-	"net/http"
-	"strings"
 )
 
 var pubkey *rsa.PublicKey
@@ -36,11 +37,12 @@ func StartTimerHandler(h http.Handler) http.Handler {
 	})
 }
 
+// AuthHandler is a middleware to authenticating a user or machine by validating an JWT auth token passed in the header of the request
 func AuthHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqToken := r.Header.Get("Authorization")
 		if reqToken == "" {
-			http.Error(w,"Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 		splitToken := strings.Split(reqToken, "Bearer ")
@@ -50,13 +52,13 @@ func AuthHandler(h http.Handler) http.Handler {
 			return pubkey, nil
 		})
 		if err != nil {
-			http.Error(w,"invalid token format", http.StatusBadRequest)
+			http.Error(w, "invalid token format", http.StatusBadRequest)
 			return
 		}
 
 		if !token.Valid {
 			log.Warn("Invalid token")
-			http.Error(w,"Unauthorized", http.StatusUnauthorized)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -66,7 +68,8 @@ func AuthHandler(h http.Handler) http.Handler {
 	})
 }
 
-// StopTimerHandler measures the time of the request with the help of the timestamp taken in StartTimerHandler and writes it to a Prometheus metric
+// FinalHandler measures the time of the request with the help of the timestamp taken in StartTimerHandler
+// and writes it to a Prometheus metric. It will also write a log line of the request in the log file
 func FinalHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mw := &ResponseWriter{w, http.StatusOK}

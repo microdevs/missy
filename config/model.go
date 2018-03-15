@@ -2,9 +2,9 @@ package config
 
 // Config holds the service config for the MiSSy service
 type Config struct {
-	Name        string         `yaml:"name"`
-	Authorization Authorization `yaml:"authorization"`
-	Environment []EnvParameter `yaml:"environment,flow,omitempty"`
+	Name          string         `yaml:"name"`
+	Authorization Authorization  `yaml:"authorization"`
+	Environment   []EnvParameter `yaml:"environment,flow,omitempty"`
 }
 
 // EnvParameter defines how a config value is passed through an environment variable. This struct as members for
@@ -20,7 +20,7 @@ type EnvParameter struct {
 	Value        string `yaml:"value,omitempty"`
 }
 
-// Auth carried authorization setting
+// Authorization carries authorization setting
 type Authorization struct {
 	PublicKeyFile string `yaml:"publicKeyFile"`
 }

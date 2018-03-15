@@ -7,17 +7,18 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	gctx "github.com/gorilla/context"
-	"github.com/gorilla/mux"
-	"github.com/microdevs/missy/config"
-	"github.com/microdevs/missy/log"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
 	"time"
+
+	gctx "github.com/gorilla/context"
+	"github.com/gorilla/mux"
+	"github.com/microdevs/missy/config"
+	"github.com/microdevs/missy/log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server is implemented by *http.Server
@@ -60,7 +61,7 @@ type Service struct {
 	timer      *Timer
 	Router     *mux.Router
 	Stop       chan os.Signal
-	ServeMux	*http.ServeMux
+	ServeMux   *http.ServeMux
 }
 
 var listenPort = "8080"
@@ -119,7 +120,7 @@ func New() *Service {
 		Prometheus: NewPrometheus(c.Name),
 		Router:     mux.NewRouter(),
 		ServeMux:   http.NewServeMux(),
-		}
+	}
 	s.prepareBeforeStart()
 	return s
 }
@@ -231,12 +232,12 @@ func (s *Service) HandleFunc(pattern string, handler func(http.ResponseWriter, *
 	return s.UnsecureHandle(pattern, http.HandlerFunc(handler))
 }
 
-// HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
+// UnsecureHandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
 func (s *Service) UnsecureHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
 	return s.UnsecureHandle(pattern, http.HandlerFunc(handler))
 }
 
-// HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
+// SecureHandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
 func (s *Service) SecureHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
 	return s.SecureHandle(pattern, http.HandlerFunc(handler))
 }
@@ -248,13 +249,13 @@ func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Rout
 	return s.Router.Handle(pattern, h)
 }
 
-// Handle is a wrapper around the original Go handle func with logging recovery and metrics
+// UnsecureHandle is a wrapper around the original Go handle func with logging recovery and metrics
 func (s *Service) UnsecureHandle(pattern string, originalHandler http.Handler) *mux.Route {
 	h := s.makeHandler(originalHandler, false)
 	return s.Router.Handle(pattern, h)
 }
 
-// Handle is a wrapper around the original Go handle func with logging recovery and metrics
+// SecureHandle is a wrapper around the original Go handle func with logging recovery and metrics
 func (s *Service) SecureHandle(pattern string, originalHandler http.Handler) *mux.Route {
 	initPublicKey()
 	h := s.makeHandler(originalHandler, true)
