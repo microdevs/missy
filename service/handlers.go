@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
+	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -13,17 +15,15 @@ import (
 var pubkey *rsa.PublicKey
 
 func initPublicKey() {
-	// todo: pubkey := config.Get("auth.pubkey")
-	pubkeyPEM := []byte(`-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDJSZnimuTDZsnXFHB7fW5iPfCy
-TpE4rO6ES/Loi3e3H7nxPwDe8YFSH5NgKHWJjV+iGHRhDXQJKPBHN+WR/O2+iyMs
-+3f8nEdKgJKaZrNMEJva2zcfl+/tlTksNgQFij0DJ2NIjkNJHXW1IJa/d3iZSyo/
-8KcYKuXuvlfNALmKSQIDAQAB
------END PUBLIC KEY-----`)
+	pubkeyLocation := config.GetInstance().Authorization.PublicKeyFile
+	pubkeyPEM, err := ioutil.ReadFile(pubkeyLocation)
+	if err != nil {
+		log.Panic("Unable to load public key file for token auth: ", err)
+	}
 
 	pkey, err := jwt.ParseRSAPublicKeyFromPEM(pubkeyPEM)
 	if err != nil {
-		log.Panic("Unable to parse public key for token auth")
+		log.Panic("Unable to parse public key for token auth: ", err)
 	}
 	pubkey = pkey
 }

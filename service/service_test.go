@@ -16,6 +16,8 @@ import (
 func runTestWithConfigFile(t *testing.T, f func(*testing.T)) {
 	var yml = []byte(`
 name: test
+authorization:
+  publicKeyFile: "test-fixtures/cert.pem"
 environment:
   - envName: ENVVAR_A
     defaultValue: foo

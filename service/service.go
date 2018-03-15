@@ -256,6 +256,7 @@ func (s *Service) UnsecureHandle(pattern string, originalHandler http.Handler) *
 
 // Handle is a wrapper around the original Go handle func with logging recovery and metrics
 func (s *Service) SecureHandle(pattern string, originalHandler http.Handler) *mux.Route {
+	initPublicKey()
 	h := s.makeHandler(originalHandler, true)
 	return s.Router.Handle(pattern, h)
 }
