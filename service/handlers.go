@@ -1,6 +1,7 @@
 package service
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
@@ -8,6 +9,24 @@ import (
 	"net/http"
 	"strings"
 )
+
+var pubkey *rsa.PublicKey
+
+func initPublicKey() {
+	// todo: pubkey := config.Get("auth.pubkey")
+	pubkeyPEM := []byte(`-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDJSZnimuTDZsnXFHB7fW5iPfCy
+TpE4rO6ES/Loi3e3H7nxPwDe8YFSH5NgKHWJjV+iGHRhDXQJKPBHN+WR/O2+iyMs
++3f8nEdKgJKaZrNMEJva2zcfl+/tlTksNgQFij0DJ2NIjkNJHXW1IJa/d3iZSyo/
+8KcYKuXuvlfNALmKSQIDAQAB
+-----END PUBLIC KEY-----`)
+
+	pkey, err := jwt.ParseRSAPublicKeyFromPEM(pubkeyPEM)
+	if err != nil {
+		log.Panic("Unable to parse public key for token auth")
+	}
+	pubkey = pkey
+}
 
 // StartTimerHandler is a middleware to start a timer for the request benchmark
 func StartTimerHandler(h http.Handler) http.Handler {
@@ -19,20 +38,6 @@ func StartTimerHandler(h http.Handler) http.Handler {
 
 func AuthHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// todo: pubkey := config.Get("auth.pubkey")
-		pubkeyPEM := []byte(`-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDJSZnimuTDZsnXFHB7fW5iPfCy
-TpE4rO6ES/Loi3e3H7nxPwDe8YFSH5NgKHWJjV+iGHRhDXQJKPBHN+WR/O2+iyMs
-+3f8nEdKgJKaZrNMEJva2zcfl+/tlTksNgQFij0DJ2NIjkNJHXW1IJa/d3iZSyo/
-8KcYKuXuvlfNALmKSQIDAQAB
------END PUBLIC KEY-----`)
-
-		pubkey, err := jwt.ParseRSAPublicKeyFromPEM(pubkeyPEM)
-		if err != nil {
-			log.Error("Unable to parse public key for token auth")
-			http.Error(w, "Authorization error", http.StatusInternalServerError)
-		}
-
 		reqToken := r.Header.Get("Authorization")
 		if reqToken == "" {
 			http.Error(w,"Unauthorized", http.StatusUnauthorized)
@@ -44,6 +49,10 @@ TpE4rO6ES/Loi3e3H7nxPwDe8YFSH5NgKHWJjV+iGHRhDXQJKPBHN+WR/O2+iyMs
 		token, err := jwt.ParseWithClaims(reqToken, &claims, func(t *jwt.Token) (interface{}, error) {
 			return pubkey, nil
 		})
+		if err != nil {
+			http.Error(w,"invalid token format", http.StatusBadRequest)
+			return
+		}
 
 		if !token.Valid {
 			log.Warn("Invalid token")
@@ -57,20 +66,12 @@ TpE4rO6ES/Loi3e3H7nxPwDe8YFSH5NgKHWJjV+iGHRhDXQJKPBHN+WR/O2+iyMs
 	})
 }
 
-// AccessLogHandler writes an acccess logon after the response has been sent
-func AccessLogHandler(h http.Handler) http.Handler {
+// StopTimerHandler measures the time of the request with the help of the timestamp taken in StartTimerHandler and writes it to a Prometheus metric
+func FinalHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mw := &ResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(mw, r)
 		log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, mw.Status, r.UserAgent())
-	})
-}
-
-// StopTimerHandler measures the time of the request with the help of the timestamp taken in StartTimerHandler and writes it to a Prometheus metric
-func StopTimerHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mw := &ResponseWriter{w, http.StatusOK}
-		h.ServeHTTP(mw, r)
 		timer := context.Get(r, RequestTimer).(*Timer)
 		prometheus := context.Get(r, PrometheusInstance).(*PrometheusHolder)
 		prometheus.OnRequestFinished(r.Method, r.URL.Path, mw.Status, timer.durationMillis())
