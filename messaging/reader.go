@@ -91,7 +91,7 @@ func NewReader(brokers []string, groupID string, topic string) Reader {
 		Topic:          topic,
 		CommitInterval: 0,    // 0 indicates that commits should be done synchronically
 		MinBytes:       10e3, // 10KB do we want it from config?
-		MaxBytes:       10e6, // 10MB do we want it from config?
+		MaxBytes:       1000 * 1000 * 50 , // 50MB do we want it from config?
 	})
 
 	return &missyReader{brokers: brokers, groupID: groupID, topic: topic, brokerReader: &readBroker{kafkaReader}}
