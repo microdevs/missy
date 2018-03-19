@@ -13,7 +13,7 @@ import (
 const httpHeaderAccept = "Accept"
 const httpHeaderContentType = "Content-Type"
 const contentTypeJSON = "application/json"
-const contentTypeTexXML = "text/xml"
+const contentTypeTextXML = "text/xml"
 const contentTypeApplicationXML = "application/xml"
 
 // Marshal will marshal any interface{} according to the Accept header of the passed request to JSON by default or XML if the header is set to text/xml
@@ -29,7 +29,7 @@ func MarshalWithCode(w http.ResponseWriter, r *http.Request, data interface{}, s
 	var contentType string
 
 	switch r.Header.Get(httpHeaderAccept) {
-	case contentTypeTexXML, contentTypeApplicationXML:
+	case contentTypeTextXML, contentTypeApplicationXML:
 		contentType = contentTypeApplicationXML
 		// todo: if it's a pointer follow the pointer and use the data
 		if reflect.TypeOf(data).Kind() == reflect.Slice {
