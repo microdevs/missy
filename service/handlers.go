@@ -19,7 +19,7 @@ func initPublicKey() {
 	pubkeyLocation := config.GetInstance().Authorization.PublicKeyFile
 	pubkeyPEM, err := ioutil.ReadFile(pubkeyLocation)
 	if err != nil {
-		log.Panic("Unable to load public key file for token auth: ", err)
+		log.Fatal("Unable to load public key file for token auth: ", err)
 	}
 
 	pkey, err := jwt.ParseRSAPublicKeyFromPEM(pubkeyPEM)

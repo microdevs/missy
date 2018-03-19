@@ -20,37 +20,36 @@ func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
 
 	var resp []byte
 	var err error
-	var convertTo string
+	var contentType string
 
-	if r.Header.Get(httpHeaderAccept) == contentTypeXML {
-		convertTo = "xml"
-		// todo: if it's a pointer follow the pointer and use the data
-		if reflect.TypeOf(subject).Kind() == reflect.Slice {
-			s := reflect.ValueOf(subject)
-			interfaceSlice := make([]interface{}, s.Len())
-			for i := 0; i < s.Len(); i++ {
-				interfaceSlice[i] = s.Index(i).Interface()
+	switch r.Header.Get(httpHeaderAccept) {
+		case contentTypeXML:
+			contentType = contentTypeXML
+			// todo: if it's a pointer follow the pointer and use the data
+			if reflect.TypeOf(subject).Kind() == reflect.Slice {
+				s := reflect.ValueOf(subject)
+				interfaceSlice := make([]interface{}, s.Len())
+				for i := 0; i < s.Len(); i++ {
+					interfaceSlice[i] = s.Index(i).Interface()
+				}
+				wrapper := Results{}
+				wrapper.Results = interfaceSlice
+				wrapper.Length = len(interfaceSlice)
+				resp, err = xml.Marshal(wrapper)
+			} else {
+				resp, err = xml.Marshal(subject)
 			}
-			wrapper := Results{}
-			wrapper.Results = interfaceSlice
-			wrapper.Length = len(interfaceSlice)
-			resp, err = xml.Marshal(wrapper)
-		} else {
-			resp, err = xml.Marshal(subject)
-		}
-
-		w.Header().Set(httpHeaderContentType, contentTypeXML)
-		w.Write(resp)
-		return
+		default:
+			contentType = contentTypeJSON
+			resp, err = json.Marshal(subject)
 	}
-	convertTo = "json"
-	resp, err = json.Marshal(subject)
+
 	if err != nil {
-		log.Errorf("Error marshalling to %s: %v", convertTo, err)
-		http.Error(w, fmt.Sprintf("Error marshalling object to %s: %s", convertTo, err), http.StatusInternalServerError)
+		log.Errorf("Error marshalling to %s: %v", contentType, err)
+		http.Error(w, fmt.Sprintf("Error marshalling object to %s: %s", contentType, err), http.StatusInternalServerError)
 	}
 
-	w.Header().Set(httpHeaderContentType, contentTypeJSON)
+	w.Header().Set(httpHeaderContentType, contentType)
 	w.Write(resp)
 }
 

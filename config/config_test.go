@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -9,6 +10,8 @@ import (
 
 var yml = []byte(`
 name: test
+authorization:
+  publicKeyFile: "/some/path"
 environment:
   - envName: ENVVAR_A
     defaultValue: foo
@@ -38,7 +41,21 @@ environment:
 `)
 
 func TestParseValueConfig(t *testing.T) {
-	parseConfigYAML(yml)
+	err := parseConfigYAML(yml)
+	if err != nil {
+		t.Log("Error unmarshalling config yaml: ", err)
+		t.Fail()
+	}
+
+	if config.Name != "test" {
+		t.Log(fmt.Sprintf("Expected name to be test but is %s", config.Name))
+		t.Fail()
+	}
+
+	if config.Authorization.PublicKeyFile != "/some/path" {
+		t.Log(fmt.Sprintf("Expected publicKeyFile to be /some/path but is %s", config.Authorization.PublicKeyFile))
+		t.Fail()
+	}
 }
 
 func TestLoadDefaultConfigFile(t *testing.T) {
@@ -59,7 +76,11 @@ func TestParseEnvironment(t *testing.T) {
 
 	os.Setenv("ENVVAR_A", "testA")
 
-	parseConfigYAML(ymlMandatory)
+	err := parseConfigYAML(ymlMandatory)
+	if err != nil {
+		t.Log("Error unmarshalling config yaml: ", err)
+		t.Fail()
+	}
 	config.ParseEnv()
 
 	if config.Get("var.a") != "testA" {

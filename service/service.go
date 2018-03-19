@@ -167,13 +167,14 @@ func shutdown(s Shutdowner) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	log.Printf("\nServer shutdown with timeout: %s\n", timeout)
+	log.Printf("" +
+		"Server shutdown with timeout: %s", timeout)
 
 	if err := s.Shutdown(ctx); err != nil {
 		log.Printf("Error: %v", err)
 	} else {
 		if hs, ok := s.(*http.Server); ok {
-			log.Printf("Finished all in-flight HTTP requests\n")
+			log.Printf("Finished all in-flight HTTP requests")
 
 			if hss, ok := hs.Handler.(Shutdowner); ok {
 				select {
@@ -185,7 +186,7 @@ func shutdown(s Shutdowner) {
 				default:
 					if deadline, ok := ctx.Deadline(); ok {
 						secs := (time.Until(deadline) + time.Second/2) / time.Second
-						log.Printf("Shutting down handler with timeout: %ds\n", secs)
+						log.Printf("Shutting down handler with timeout: %ds", secs)
 					}
 
 					done := make(chan error)
@@ -209,7 +210,7 @@ func shutdown(s Shutdowner) {
 
 		if deadline, ok := ctx.Deadline(); ok {
 			secs := (time.Until(deadline) + time.Second/2) / time.Second
-			log.Printf("Shutdown finished %ds before deadline\n", secs)
+			log.Printf("Shutdown finished %ds before deadline", secs)
 		}
 	}
 }
@@ -227,14 +228,14 @@ func (s *Service) prepareBeforeStart() {
 }
 
 // HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
-// Deprecated: Developers should use SecureHandleFunc() or UnsecureHandleFunc() explicitly
+// Deprecated: Developers should use SecureHandleFunc() or UnsafeHandleFunc() explicitly
 func (s *Service) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
-	return s.UnsecureHandle(pattern, http.HandlerFunc(handler))
+	return s.UnsafeHandle(pattern, http.HandlerFunc(handler))
 }
 
-// UnsecureHandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
-func (s *Service) UnsecureHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
-	return s.UnsecureHandle(pattern, http.HandlerFunc(handler))
+// UnsafeHandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
+func (s *Service) UnsafeHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
+	return s.UnsafeHandle(pattern, http.HandlerFunc(handler))
 }
 
 // SecureHandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
@@ -243,14 +244,14 @@ func (s *Service) SecureHandleFunc(pattern string, handler func(http.ResponseWri
 }
 
 // Handle is a wrapper around the original Go handle func with logging recovery and metrics
-// Deprecated: Developers should use SecureHandle() or UnsecureHandle() explicitly
+// Deprecated: Developers should use SecureHandle() or UnsafeHandle() explicitly
 func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Route {
 	h := s.makeHandler(originalHandler, false)
 	return s.Router.Handle(pattern, h)
 }
 
-// UnsecureHandle is a wrapper around the original Go handle func with logging recovery and metrics
-func (s *Service) UnsecureHandle(pattern string, originalHandler http.Handler) *mux.Route {
+// UnsafeHandle is a wrapper around the original Go handle func with logging recovery and metrics
+func (s *Service) UnsafeHandle(pattern string, originalHandler http.Handler) *mux.Route {
 	h := s.makeHandler(originalHandler, false)
 	return s.Router.Handle(pattern, h)
 }
