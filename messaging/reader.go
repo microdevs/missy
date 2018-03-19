@@ -108,28 +108,26 @@ func (mr *missyReader) Read(msgFunc ReadMessageFunc) error {
 	mr.readFunc = &msgFunc
 
 	// start reading goroutine
-	go func() {
-		for {
-			ctx := context.Background()
+	for {
+		ctx := context.Background()
 
-			m, err := mr.brokerReader.FetchMessage(ctx)
-			if err != nil {
-				break
-			}
-
-			log.Infof("# messaging # new message: [topic] %v; [part] %v; [offset] %v; %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
-			if err := msgFunc(m); err != nil {
-				log.Errorf("# messaging # cannot commit a message: %v", err)
-				continue
-			}
-
-			// commit message if no error
-			if err := mr.brokerReader.CommitMessages(ctx, m); err != nil {
-				// should we do something else to just logging not committed message?
-				log.Errorf("cannot commit message [%s] %v/%v: %s = %s; with error: %v", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value), err)
-			}
+		m, err := mr.brokerReader.FetchMessage(ctx)
+		if err != nil {
+			return err
 		}
-	}()
+
+		log.Infof("# messaging # new message: [topic] %v; [part] %v; [offset] %v; %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+		if err := msgFunc(m); err != nil {
+			log.Errorf("# messaging # cannot commit a message: %v", err)
+			continue
+		}
+
+		// commit message if no error
+		if err := mr.brokerReader.CommitMessages(ctx, m); err != nil {
+			// should we do something else to just logging not committed message?
+			log.Errorf("cannot commit message [%s] %v/%v: %s = %s; with error: %v", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value), err)
+		}
+	}
 
 	return nil
 }
