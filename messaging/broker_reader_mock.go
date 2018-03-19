@@ -6,9 +6,8 @@ package messaging
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockReader is a mock of Reader interface
