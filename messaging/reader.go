@@ -7,6 +7,9 @@ import (
 
 	"github.com/microdevs/missy/log"
 	"github.com/segmentio/kafka-go"
+	"github.com/microdevs/missy/config"
+	"strconv"
+	"time"
 )
 
 // ReadMessageFunc is a message reading callback function, on error message will not be committed to underlying
@@ -29,11 +32,14 @@ type BrokerReader interface {
 
 // missyReader used as a default missy Reader implementation
 type missyReader struct {
-	brokers      []string
-	groupID      string
-	topic        string
-	brokerReader BrokerReader
-	readFunc     *ReadMessageFunc
+	brokers         []string
+	groupID         string
+	topic           string
+	brokerReader    BrokerReader
+	readFunc        *ReadMessageFunc
+	dlqWriter       Writer
+	maxRetries      int
+	retriesInterval time.Duration
 }
 
 // readBroker us as a wrapper for kafka.Reader implementation to fulfill BrokerReader interface
@@ -94,7 +100,28 @@ func NewReader(brokers []string, groupID string, topic string) Reader {
 		MaxBytes:       10e6, // 10MB do we want it from config?
 	})
 
-	return &missyReader{brokers: brokers, groupID: groupID, topic: topic, brokerReader: &readBroker{kafkaReader}}
+	retries, err := strconv.Atoi(config.Get("kafka.retries.max.number"))
+	if retries <= 0 || err != nil {
+		log.Debug("Setting retries number to 3, as kafka.retries.max.number was not set or wrong")
+		retries = 3
+	}
+	var intervalTime time.Duration
+	interval, err := strconv.Atoi(config.Get("kafka.retries.interval.ms"))
+	if interval <= 0 || err != nil {
+		log.Debug("Setting retries interval to 5000 ms, as kafka.retries.interval.ms was not set or wrong")
+		intervalTime = 5000 * time.Millisecond
+	}
+
+	log.Infof("Configured num of maxRetries: %v with interval %v", retries, interval)
+
+	return &missyReader{brokers: brokers,
+		groupID: groupID,
+		topic: topic,
+		brokerReader: &readBroker{kafkaReader},
+		dlqWriter: NewWriter(brokers, topic+".dlq"),
+		maxRetries: retries,
+		retriesInterval: intervalTime,
+	}
 }
 
 // Read start reading goroutine that calls msgFunc on new message, you need to close it after use
@@ -118,19 +145,37 @@ func (mr *missyReader) Read(msgFunc ReadMessageFunc) error {
 			}
 
 			log.Infof("# messaging # new message: [topic] %v; [part] %v; [offset] %v; %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
-			if err := msgFunc(m); err != nil {
-				log.Errorf("# messaging # cannot commit a message: %v", err)
+			if err := mr.processMessage(msgFunc, m, 0); err != nil {
+				log.Errorf("# messaging # %v, sending message to dead letter queue", err)
+				mr.dlqWriter.Write(m.Key, m.Value)
+				mr.commit(ctx, m)
 				continue
 			}
 
 			// commit message if no error
-			if err := mr.brokerReader.CommitMessages(ctx, m); err != nil {
-				// should we do something else to just logging not committed message?
-				log.Errorf("cannot commit message [%s] %v/%v: %s = %s; with error: %v", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value), err)
-			}
+			mr.commit(ctx, m)
 		}
 	}()
 
+	return nil
+}
+func (mr *missyReader) commit(ctx context.Context, m Message) {
+	if err := mr.brokerReader.CommitMessages(ctx, m); err != nil {
+		// should we do something else to just logging not committed message?
+		log.Errorf("cannot commit message [%s] %v/%v: %s = %s; with error: %v", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value), err)
+	}
+}
+//will try to process same message for configured number of times
+func (mr *missyReader) processMessage(msgFunc ReadMessageFunc, message Message, retryNumber int) error {
+
+	if retryNumber > mr.maxRetries {
+		return errors.New("reached maximum number of retries")
+	}
+	if err := msgFunc(message); err != nil {
+		log.Errorf("# messaging # retry number %v failed, trying again", retryNumber)
+		time.Sleep(mr.retriesInterval)
+		return mr.processMessage(msgFunc, message, retryNumber+1)
+	}
 	return nil
 }
 
