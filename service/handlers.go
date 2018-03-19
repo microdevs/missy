@@ -24,7 +24,7 @@ func initPublicKey() {
 
 	pkey, err := jwt.ParseRSAPublicKeyFromPEM(pubkeyPEM)
 	if err != nil {
-		log.Panic("Unable to parse public key for token auth: ", err)
+		log.Fatal("Unable to parse public key for token auth: ", err)
 	}
 	pubkey = pkey
 }
