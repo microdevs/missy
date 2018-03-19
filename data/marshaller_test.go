@@ -54,7 +54,7 @@ func TestMarshalToXML(t *testing.T) {
 
 	request := &http.Request{
 		Header: http.Header{
-			httpHeaderAccept: []string{contentTypeXML},
+			httpHeaderAccept: []string{contentTypeApplicationXML},
 		},
 	}
 
@@ -68,8 +68,8 @@ func TestMarshalToXML(t *testing.T) {
 		t.Error("Marshaller failed with an unknown error")
 	}
 
-	if ct := response.Header.Get(httpHeaderContentType); ct != contentTypeXML {
-		t.Errorf("Accept header has the wrong content type. Expected %s, actual %s", contentTypeXML, ct)
+	if ct := response.Header.Get(httpHeaderContentType); ct != contentTypeApplicationXML {
+		t.Errorf("Accept header has the wrong content type. Expected %s, actual %s", contentTypeApplicationXML, ct)
 	}
 	bodyBytes, _ := ioutil.ReadAll(rec.Body)
 	if strBody := string(bodyBytes); strBody != expectedXML {

@@ -167,7 +167,7 @@ func shutdown(s Shutdowner) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	log.Printf("" +
+	log.Printf(""+
 		"Server shutdown with timeout: %s", timeout)
 
 	if err := s.Shutdown(ctx); err != nil {
