@@ -16,6 +16,10 @@ import (
 var pubkey *rsa.PublicKey
 
 func initPublicKey() {
+	if pubkey != nil {
+		return
+	}
+
 	pubkeyLocation := config.GetInstance().Authorization.PublicKeyFile
 	pubkeyPEM, err := ioutil.ReadFile(pubkeyLocation)
 	if err != nil {
