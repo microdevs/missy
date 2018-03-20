@@ -224,7 +224,6 @@ func (s *Service) prepareBeforeStart() {
 
 	s.ServeMux.Handle("/", s.Router)
 
-
 }
 
 // HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
