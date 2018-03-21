@@ -76,12 +76,18 @@ func AuthHandler(h http.Handler) http.Handler {
 // and writes it to a Prometheus metric. It will also write a log line of the request in the log file
 func FinalHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mw := &ResponseWriter{w, http.StatusOK}
-		h.ServeHTTP(mw, r)
-		log.Infof("%s \"%s %s %s\" %d - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, mw.Status, r.UserAgent())
+		mw := &ResponseWriter{ResponseWriter: w}
+		// if Hijacker interface is implemented switch to our HijackedResponseWriter
+		if _, ok := w.(http.Hijacker); ok {
+			w = &HijackerResponseWriter{mw}
+		} else {
+			w = mw
+		}
+		h.ServeHTTP(w, r)
+		log.Infof("%s \"%s %s %s %d\" - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, mw.Status(), r.UserAgent())
 		timer := context.Get(r, RequestTimer).(*Timer)
 		prometheus := context.Get(r, PrometheusInstance).(*PrometheusHolder)
-		prometheus.OnRequestFinished(r.Method, r.URL.Path, mw.Status, timer.durationMillis())
+		prometheus.OnRequestFinished(r.Method, r.URL.Path, mw.Status(), timer.durationMillis())
 	})
 }
 

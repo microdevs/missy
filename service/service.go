@@ -14,6 +14,9 @@ import (
 	"syscall"
 	"time"
 
+	"bufio"
+	"net"
+
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/microdevs/missy/config"
@@ -289,21 +292,47 @@ func (s *Service) makeHandler(originalHandler http.Handler, secure bool) http.Ha
 // ResponseWriter is the MiSSy owned response writer object
 type ResponseWriter struct {
 	http.ResponseWriter
-	Status int
+	status    int
+	headerSet bool
+}
+
+// AdvancedResponseWriter is the MiSSy owned response writer which also handles Hijacker
+type HijackerResponseWriter struct {
+	*ResponseWriter
 }
 
 // WriteHeader overrides the original WriteHeader function to keep the status code
 func (w *ResponseWriter) WriteHeader(code int) {
-	w.Status = code
+	w.status = code
+	w.headerSet = true
 	w.ResponseWriter.WriteHeader(code)
+}
+
+// Just sets the status code for metrics and logging
+// Useful for example for hijacked ResponseWriter where WriteHeader and Writer are bypassed
+func (w *ResponseWriter) WriteMetricsHeader(code int) {
+	w.status = code
 }
 
 // ResponseWriter wrapper for http.ResponseWriter interface
 func (w *ResponseWriter) Write(b []byte) (int, error) {
+	if !w.headerSet {
+		w.WriteHeader(200)
+	}
 	return w.ResponseWriter.Write(b)
+}
+
+// Getter for status
+func (w *ResponseWriter) Status() int {
+	return w.status
 }
 
 // Header wrapper for http.ResponseWriter interface
 func (w *ResponseWriter) Header() http.Header {
 	return w.ResponseWriter.Header()
+}
+
+// Hijack wrapper for http.Hijacker interface
+func (w *HijackerResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return w.ResponseWriter.ResponseWriter.(http.Hijacker).Hijack()
 }
