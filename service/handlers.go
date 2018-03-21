@@ -17,8 +17,11 @@ var pubkey *rsa.PublicKey
 
 // JWT Auth related constants
 const (
+	// context
 	ContextToken = "token"
 	ContextClaims = "claims"
+
+	// claims
 	ClaimUsername = "username"
 	ClaimUserId = "userid"
 )
