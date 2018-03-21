@@ -67,6 +67,7 @@ func AuthHandler(h http.Handler) http.Handler {
 		}
 
 		context.Set(r, "token", token)
+		context.Set(r, "claims", claims)
 
 		h.ServeHTTP(w, r)
 	})
