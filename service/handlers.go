@@ -15,6 +15,15 @@ import (
 
 var pubkey *rsa.PublicKey
 
+// JWT Auth related constants
+const (
+	ContextToken = "token"
+	ContextClaims = "claims"
+	ClaimUsername = "username"
+	ClaimUserId = "userid"
+)
+
+
 func initPublicKey() {
 	if pubkey != nil {
 		return
@@ -66,8 +75,8 @@ func AuthHandler(h http.Handler) http.Handler {
 			return
 		}
 
-		context.Set(r, "token", token)
-		context.Set(r, "claims", claims)
+		context.Set(r, ContextToken, token)
+		context.Set(r, ContextClaims, claims)
 
 		h.ServeHTTP(w, r)
 	})

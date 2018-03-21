@@ -24,10 +24,10 @@ func TestSecureHandlerAuth(t *testing.T) {
 		s.SecureHandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 
 			// expect claims to be populated in context
-			claims := context.Get(r, "claims")
+			claims := context.Get(r, ContextClaims)
 
-			username := claims.(jwt.MapClaims)["username"].(string)
-			userId := claims.(jwt.MapClaims)["userid"].(float64)
+			username := claims.(jwt.MapClaims)[ClaimUsername].(string)
+			userId := claims.(jwt.MapClaims)[ClaimUserId].(float64)
 
 			if username != "test@test.de" {
 				t.Log(fmt.Sprintf("claims username is expected to be test@test.de but is %s", username))
