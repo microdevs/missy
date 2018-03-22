@@ -317,7 +317,7 @@ func (w *ResponseWriter) WriteMetricsHeader(code int) {
 // ResponseWriter wrapper for http.ResponseWriter interface
 func (w *ResponseWriter) Write(b []byte) (int, error) {
 	if !w.headerSet {
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	}
 	return w.ResponseWriter.Write(b)
 }
