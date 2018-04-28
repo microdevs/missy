@@ -9,7 +9,7 @@ before_script:
 
 script:
   - make tests_with_cover
-  - COVERALLS_TOKEN=${COVERALLS_TOKEN} make goveralls
+  - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then make goveralls; fi'
 
 notifications:
   slack:

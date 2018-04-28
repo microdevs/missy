@@ -7,17 +7,42 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+	"time"
+
+	"bufio"
+	"net"
+
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
-	"os"
-	"os/signal"
-	"runtime"
-	"time"
 )
+
+// Server is implemented by *http.Server
+type Server interface {
+	ListenAndServe() error
+	Shutdowner
+}
+
+// TLSServer is implemented by *http.Server
+type TLSServer interface {
+	ListenAndServeTLS(string, string) error
+	Shutdowner
+}
+
+// Shutdowner is implemented by *http.Server, and optionally by *http.Server.Handler
+type Shutdowner interface {
+	Shutdown(ctx context.Context) error
+}
+
+// signals is the channel used to signal shutdown
+var signals chan os.Signal
 
 type key int
 
@@ -39,6 +64,7 @@ type Service struct {
 	timer      *Timer
 	Router     *mux.Router
 	Stop       chan os.Signal
+	ServeMux   *http.ServeMux
 }
 
 var listenPort = "8080"
@@ -90,22 +116,22 @@ func New() *Service {
 
 	c := config.GetInstance()
 
-	return &Service{
+	s := &Service{
 		name:       c.Name,
 		Host:       listenHost,
 		Port:       listenPort,
 		Prometheus: NewPrometheus(c.Name),
-		Router:     mux.NewRouter()}
+		Router:     mux.NewRouter(),
+		ServeMux:   http.NewServeMux(),
+	}
+	s.prepareBeforeStart()
+	return s
 }
 
 // Start starts the http server
 func (s *Service) Start() {
-	// Open a channel to capture ^C signal
-	s.Stop = make(chan os.Signal, 1)
-	signal.Notify(s.Stop, os.Interrupt)
 	// start the server
 	log.Infof("Starting service %s listening on %s:%s ...", s.name, s.Host, s.Port)
-	s.prepareBeforeStart()
 	// set host and port to listen to
 	listen := s.Host + ":" + s.Port
 	h := &http.Server{Addr: listen, Handler: s.Router}
@@ -115,23 +141,81 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Error starting Service due to %v", err)
 		}
+		log.Debugf("server shut down")
 	}()
 
-	//wait for SIGTERM
+	s.prepareShutdown(h)
+}
+
+func (s *Service) prepareShutdown(h Server) {
+	s.Stop = make(chan os.Signal, 1)
+	signal.Notify(s.Stop, os.Interrupt, syscall.SIGTERM)
 	<-s.Stop
-	// we linebreak here just to get the log message printed nicely
-	fmt.Print("\n")
-	log.Warnf("Service shutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel() // Cancel ctx as soon as handleSearch returns.
-	//TODO: build some connection drainer for websockets
-	h.Shutdown(ctx)
-	log.Infof("Service stopped gracefully.")
+	shutdown(h)
 }
 
 // Shutdown allows to stop the HTTP Server gracefully
 func (s *Service) Shutdown() {
 	s.Stop <- os.Signal(os.Interrupt)
+}
+
+func shutdown(s Shutdowner) {
+	if s == nil {
+		return
+	}
+
+	// todo: make configurable
+	timeout := time.Second * 5
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	log.Printf(""+
+		"Server shutdown with timeout: %s", timeout)
+
+	if err := s.Shutdown(ctx); err != nil {
+		log.Printf("Error: %v", err)
+	} else {
+		if hs, ok := s.(*http.Server); ok {
+			log.Printf("Finished all in-flight HTTP requests")
+
+			if hss, ok := hs.Handler.(Shutdowner); ok {
+				select {
+				case <-ctx.Done():
+					if err := ctx.Err(); err != nil {
+						log.Printf("Error: %v", err)
+						return
+					}
+				default:
+					if deadline, ok := ctx.Deadline(); ok {
+						secs := (time.Until(deadline) + time.Second/2) / time.Second
+						log.Printf("Shutting down handler with timeout: %ds", secs)
+					}
+
+					done := make(chan error)
+
+					go func() {
+						<-ctx.Done()
+						done <- ctx.Err()
+					}()
+
+					go func() {
+						done <- hss.Shutdown(ctx)
+					}()
+
+					if err := <-done; err != nil {
+						log.Printf("Error: %v", err)
+						return
+					}
+				}
+			}
+		}
+
+		if deadline, ok := ctx.Deadline(); ok {
+			secs := (time.Until(deadline) + time.Second/2) / time.Second
+			log.Printf("Shutdown finished %ds before deadline", secs)
+		}
+	}
 }
 
 // prepareBeforeStart sets up the standard handlers
@@ -141,17 +225,50 @@ func (s *Service) prepareBeforeStart() {
 	s.Router.HandleFunc("/health", s.healthHandler).Methods("GET")
 	s.Router.HandleFunc("/info", s.infoHandler).Methods("GET")
 
-	http.Handle("/", s.Router)
+	s.ServeMux.Handle("/", s.Router)
+
 }
 
 // HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
+// Deprecated: Developers should use SecureHandleFunc() or UnsafeHandleFunc() explicitly
 func (s *Service) HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
-	return s.Handle(pattern, http.HandlerFunc(handler))
+	return s.UnsafeHandle(pattern, http.HandlerFunc(handler))
+}
+
+// UnsafeHandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
+func (s *Service) UnsafeHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
+	return s.UnsafeHandle(pattern, http.HandlerFunc(handler))
+}
+
+// SecureHandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
+func (s *Service) SecureHandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) *mux.Route {
+	return s.SecureHandle(pattern, http.HandlerFunc(handler))
 }
 
 // Handle is a wrapper around the original Go handle func with logging recovery and metrics
+// Deprecated: Developers should use SecureHandle() or UnsafeHandle() explicitly
 func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Route {
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := s.makeHandler(originalHandler, false)
+	return s.Router.Handle(pattern, h)
+}
+
+// UnsafeHandle is a wrapper around the original Go handle func with logging recovery and metrics
+func (s *Service) UnsafeHandle(pattern string, originalHandler http.Handler) *mux.Route {
+	h := s.makeHandler(originalHandler, false)
+	return s.Router.Handle(pattern, h)
+}
+
+// SecureHandle is a wrapper around the original Go handle func with logging recovery and metrics
+func (s *Service) SecureHandle(pattern string, originalHandler http.Handler) *mux.Route {
+	initPublicKey()
+	h := s.makeHandler(originalHandler, true)
+	return s.Router.Handle(pattern, h)
+}
+
+// Makes a handler that wraps Missy specific functionality and returns either a secure or insecure chain
+// a secure chain includes the auth handler
+func (s *Service) makeHandler(originalHandler http.Handler, secure bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
 				stack := make([]byte, 1024*8)
@@ -164,30 +281,58 @@ func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Rout
 		gctx.Set(r, PrometheusInstance, s.Prometheus)
 		gctx.Set(r, RouterInstance, s.Router)
 		// call custom handler
-		chain := NewChain(StartTimerHandler, AccessLogHandler).Final(StopTimerHandler).Then(originalHandler)
+		chain := NewChain(StartTimerHandler).Final(FinalHandler).Then(originalHandler)
+		if secure {
+			chain = NewChain(StartTimerHandler, AuthHandler).Final(FinalHandler).Then(originalHandler)
+		}
 		chain.ServeHTTP(w, r)
 	})
-	return s.Router.Handle(pattern, h)
 }
 
 // ResponseWriter is the MiSSy owned response writer object
 type ResponseWriter struct {
 	http.ResponseWriter
-	Status int
+	status    int
+	headerSet bool
+}
+
+// AdvancedResponseWriter is the MiSSy owned response writer which also handles Hijacker
+type HijackerResponseWriter struct {
+	*ResponseWriter
 }
 
 // WriteHeader overrides the original WriteHeader function to keep the status code
 func (w *ResponseWriter) WriteHeader(code int) {
-	w.Status = code
+	w.status = code
+	w.headerSet = true
 	w.ResponseWriter.WriteHeader(code)
+}
+
+// Just sets the status code for metrics and logging
+// Useful for example for hijacked ResponseWriter where WriteHeader and Writer are bypassed
+func (w *ResponseWriter) WriteMetricsHeader(code int) {
+	w.status = code
 }
 
 // ResponseWriter wrapper for http.ResponseWriter interface
 func (w *ResponseWriter) Write(b []byte) (int, error) {
+	if !w.headerSet {
+		w.WriteHeader(http.StatusOK)
+	}
 	return w.ResponseWriter.Write(b)
+}
+
+// Getter for status
+func (w *ResponseWriter) Status() int {
+	return w.status
 }
 
 // Header wrapper for http.ResponseWriter interface
 func (w *ResponseWriter) Header() http.Header {
 	return w.ResponseWriter.Header()
+}
+
+// Hijack wrapper for http.Hijacker interface
+func (w *HijackerResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return w.ResponseWriter.ResponseWriter.(http.Hijacker).Hijack()
 }

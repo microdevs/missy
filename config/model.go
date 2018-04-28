@@ -2,8 +2,9 @@ package config
 
 // Config holds the service config for the MiSSy service
 type Config struct {
-	Name        string         `yaml:"name"`
-	Environment []EnvParameter `yaml:"environment,flow,omitempty"`
+	Name          string         `yaml:"name"`
+	Authorization Authorization  `yaml:"authorization"`
+	Environment   []EnvParameter `yaml:"environment,flow,omitempty"`
 	Resources   []string       `yaml:"resources,omitempty"`
 }
 
@@ -18,4 +19,9 @@ type EnvParameter struct {
 	Mandatory    bool   `yaml:"mandatory"`
 	Usage        string `yaml:"usage"`
 	Value        string `yaml:"value,omitempty"`
+}
+
+// Authorization carries authorization setting
+type Authorization struct {
+	PublicKeyFile string `yaml:"publicKeyFile"`
 }

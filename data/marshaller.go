@@ -4,28 +4,36 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/microdevs/missy/log"
 	"net/http"
 	"reflect"
+
+	"github.com/microdevs/missy/log"
 )
 
 const httpHeaderAccept = "Accept"
 const httpHeaderContentType = "Content-Type"
 const contentTypeJSON = "application/json"
-const contentTypeXML = "text/xml"
+const contentTypeTextXML = "text/xml"
+const contentTypeApplicationXML = "application/xml"
 
 // Marshal will marshal any interface{} according to the Accept header of the passed request to JSON by default or XML if the header is set to text/xml
-func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
+func Marshal(w http.ResponseWriter, r *http.Request, data interface{}) {
+	MarshalWithCode(w, r, data, http.StatusOK)
+}
+
+// MarshalWithCode will marshal any interface{} according to the Accept header and will use the statusCode provided
+func MarshalWithCode(w http.ResponseWriter, r *http.Request, data interface{}, statusCode int) {
 
 	var resp []byte
 	var err error
-	var convertTo string
+	var contentType string
 
-	if r.Header.Get(httpHeaderAccept) == contentTypeXML {
-		convertTo = "xml"
+	switch r.Header.Get(httpHeaderAccept) {
+	case contentTypeTextXML, contentTypeApplicationXML:
+		contentType = contentTypeApplicationXML
 		// todo: if it's a pointer follow the pointer and use the data
-		if reflect.TypeOf(subject).Kind() == reflect.Slice {
-			s := reflect.ValueOf(subject)
+		if reflect.TypeOf(data).Kind() == reflect.Slice {
+			s := reflect.ValueOf(data)
 			interfaceSlice := make([]interface{}, s.Len())
 			for i := 0; i < s.Len(); i++ {
 				interfaceSlice[i] = s.Index(i).Interface()
@@ -35,26 +43,21 @@ func Marshal(w http.ResponseWriter, r *http.Request, subject interface{}) {
 			wrapper.Length = len(interfaceSlice)
 			resp, err = xml.Marshal(wrapper)
 		} else {
-			resp, err = xml.Marshal(subject)
+			resp, err = xml.Marshal(data)
 		}
-
-		w.Header().Set(httpHeaderContentType, contentTypeXML)
-		w.Write(resp)
-		return
-	} else {
-		convertTo = "json"
-		resp, err = json.Marshal(subject)
-		w.Header().Set(httpHeaderContentType, contentTypeJSON)
-		w.Write(resp)
-		return
+	default:
+		contentType = contentTypeJSON
+		resp, err = json.Marshal(data)
 	}
 
 	if err != nil {
-		log.Errorf("Error marshalling to %s: %v", convertTo, err)
-		http.Error(w, fmt.Sprintf("Error marshalling object to %s: %s", convertTo, err), http.StatusInternalServerError)
+		log.Errorf("Error marshalling to %s: %v", contentType, err)
+		http.Error(w, fmt.Sprintf("Error marshalling object to %s: %s", contentType, err), http.StatusInternalServerError)
 	}
 
-	http.Error(w, "Unknown error during marshalling response object", http.StatusInternalServerError)
+	w.Header().Set(httpHeaderContentType, contentType)
+	w.WriteHeader(statusCode)
+	w.Write(resp)
 }
 
 // Results is a wrapper type to wrap results in an XML <result> node

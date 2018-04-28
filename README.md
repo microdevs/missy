@@ -102,3 +102,32 @@ Response:
 ```
 OK
 ```
+
+### Messaging
+Use messaging.Reader and messaging.Writer to subscribe and publish messages.
+It uses kafka underneath.
+Example usage:
+
+Reader with brokers hosts, group-id and topic
+
+```go
+reader := messaging.NewReader([]string{"localhost:9092"}, "group-id", "topic")
+err := reader.Read(func(msg Message) error{
+    // do something with msg
+    
+    // return nil or error (if commit should not happen)
+})
+
+// remember to close reader after use
+defer reader.Close()
+```
+
+Writer with brokers hosts and topic
+
+```go
+writer := messaging.NewWriter([]string{"localhost:9092"}, "topic")
+err := writer.Write([]byte("key"), []byte("value"))
+
+// remember to close writer after use
+defer writer.Close()
+```
