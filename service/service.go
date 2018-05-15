@@ -68,7 +68,7 @@ type Service struct {
 }
 
 var listenPort = "8080"
-var listenHost = "localhost"
+var listenHost = "0.0.0.0"
 var controllerAddr string
 
 // FlagMissyControllerAddressDefault is a default for the missy-controller url used in the during service initialisation when given the init flag
