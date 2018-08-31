@@ -33,6 +33,8 @@ var configDir = func() string {
 
 func CreateRootCA() {
 
+	rootCATargetFile := configDir+"/root-cert.pem"
+
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		log.Fatalf("failed to generate private key: %s", err)
@@ -67,7 +69,7 @@ func CreateRootCA() {
 		log.Fatalf("Failed to create certificate: %s", err)
 	}
 
-	certOut, err := os.Create(configDir+"/root-cert.pem")
+	certOut, err := os.Create(rootCATargetFile)
 	if err != nil {
 		log.Fatalf("failed to open cert.pem for writing: %s", err)
 	}
@@ -137,7 +139,8 @@ func CreateCertFromCA(name, rootCertFile, rootKeyFile, o, ou, cn, country, provi
 	}
 
 	certFileName := fmt.Sprintf("%s-cert.pem", name)
-	certOut, err := os.Create(configDir+"/"+certFileName)
+	certFilePath := configDir+"/"+certFileName
+	certOut, err := os.Create(certFilePath)
 	if err != nil {
 		log.Fatalf("failed to open %s for writing: %s", certFileName, err)
 	}

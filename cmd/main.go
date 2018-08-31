@@ -12,6 +12,7 @@ import (
 )
 
 var initCmd = flag.NewFlagSet("init", flag.ExitOnError)
+var initForce bool
 
 func main() {
 
@@ -22,11 +23,15 @@ func main() {
 		kubeconfig = initCmd.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 
+	initCmd.BoolVar(&initForce, "force", false, "Force recreate certificates")
+
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		initCmd.Parse(os.Args[2:])
-		missy.CreateRootCA()
-		missy.CreateCertFromCA("intermediate", "root-cert.pem", "root-key.pem", "Missy", "Missy Subsystem", "Missy Subsystem Intermediate", "DE", "Berlin", true)
-		missy.CreateCertFromCA("vault", "intermediate-cert.pem", "intermediate-key.pem", "Missy", "Missy Subsystem", "vault", "DE", "Berlin", false)
+		if initForce {
+			missy.CreateRootCA()
+			missy.CreateCertFromCA( "intermediate", "root-cert.pem", "root-key.pem", "Missy", "Missy Subsystem", "Missy Subsystem Intermediate", "DE", "Berlin", true)
+			missy.CreateCertFromCA( "vault", "intermediate-cert.pem", "intermediate-key.pem", "Missy", "Missy Subsystem", "vault", "DE", "Berlin", false)
+		}
 		kubernetes.InitializeBaseSystem(kubeconfig)
 		kubernetes.CreateVaultConfig()
 		kubernetes.UploadCertificateToKubernetes()

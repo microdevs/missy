@@ -1,20 +1,22 @@
 package kubernetes
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
-	"github.com/hashicorp/vault/api"
-	"github.com/microdevs/missy/log"
-	"io/ioutil"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-	"net/http"
-	"os"
+
+"crypto/tls"
+"crypto/x509"
+"encoding/pem"
+"fmt"
+"github.com/hashicorp/vault/api"
+"github.com/microdevs/missy/log"
+"io/ioutil"
+apiv1 "k8s.io/api/core/v1"
+metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+"k8s.io/apimachinery/pkg/util/intstr"
+k8s "k8s.io/client-go/kubernetes"
+"k8s.io/client-go/tools/clientcmd"
+"net/http"
+"os"
+	"strings"
 )
 
 type CAConfig struct {
@@ -63,6 +65,13 @@ func UploadCertificateToKubernetes() {
 		},
 	}
 
+	err = secretsClient.Delete(secret.Name, &metav1.DeleteOptions{})
+	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			log.Panicf("Error deleting existing tls secret for vault: %s", err)
+		}
+	}
+
 	response, err := secretsClient.Create(secret)
 	if err != nil {
 		log.Panicf("Error creating tls secret for vault %s", err)
@@ -84,7 +93,7 @@ func CreateVaultConfig() {
 	}
 	configClient := clientset.CoreV1().ConfigMaps("default")
 
-	vaultConfig := `{"listener":{"tcp":{"address":"vault:8200","tls_cert_file":"/etc/vault-tls/vault.pem","tls_key_file":"/etc/vault-tls/vault.key"}},"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}`
+	vaultConfig := `{"listener":{"tcp":{"address":"0.0.0.0:8201","tls_cert_file":"/etc/vault-tls/vault.pem","tls_key_file":"/etc/vault-tls/vault.key"}},"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}`
 
 	configMap := &apiv1.ConfigMap{
 		Data: map[string]string{
@@ -95,10 +104,16 @@ func CreateVaultConfig() {
 		},
 	}
 
-	response, err := configClient.Create(configMap)
-
+	err = configClient.Delete(configMap.Name, &metav1.DeleteOptions{})
 	if err != nil {
-		log.Panicf("Error creating tls secret for vault %s", err)
+		if !strings.Contains(err.Error(), "not found") {
+			log.Panicf("Error deleting existing config for vault: %s", err)
+		}
+	}
+
+	response, err := configClient.Create(configMap)
+	if err != nil {
+		log.Panicf("Error creating config for vault: %s", err)
 	}
 
 	fmt.Println(response)

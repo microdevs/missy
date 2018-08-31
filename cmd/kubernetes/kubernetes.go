@@ -8,6 +8,9 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
+	"strings"
+	"github.com/microdevs/missy/log"
+	"time"
 )
 
 var kubeconfig *string
@@ -64,6 +67,25 @@ func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, v
 		},
 	}
 
+	err = deploymentsClient.Delete(deployment.Name, &metav1.DeleteOptions{})
+	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			log.Panicf("Error deleting existing service: %s", err)
+		}
+	} else {
+		for {
+			_, err := deploymentsClient.Get(deployment.Name, metav1.GetOptions{})
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					break
+				}
+				log.Panicf("Error while waiting for deleting deployment: %s", err)
+			}
+			fmt.Print(".")
+			time.Sleep(1 * time.Second)
+		}
+	}
+
 	fmt.Println("Creating Deployment...")
 	result, err := deploymentsClient.Create(deployment)
 	if err != nil {
@@ -95,6 +117,26 @@ func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, v
 			},
 		},
 	}
+
+	err = serviceClient.Delete(service.Name, &metav1.DeleteOptions{})
+	if err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			log.Panicf("Error deleting existing service: %s", err)
+		}
+	} else {
+		for {
+			_, err := serviceClient.Get(service.Name, metav1.GetOptions{})
+			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					break
+				}
+				log.Panicf("Error while waiting for deletion of service: %s", err)
+			}
+			fmt.Print(".")
+			time.Sleep(1 * time.Second)
+		}
+	}
+
 
 	_, err = serviceClient.Create(service)
 	if err != nil {
