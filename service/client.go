@@ -11,7 +11,7 @@ import (
 	"github.com/microdevs/missy/log"
 )
 
-// returns a new http.Client with custom CA Cert if given through TLS_CACERT
+// NewClient returns a new http.Client with custom CA Cert if given through TLS_CACERT
 func NewClient() *http.Client {
 	config := &tls.Config{
 		RootCAs: rootCAs(),
@@ -20,7 +20,7 @@ func NewClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-// CAPool returns the system CA Pool and inserts a custom CA file if given
+// rootCAs returns the system CA Pool and inserts a custom CA file if given
 func rootCAs() *x509.CertPool {
 	// Get the SystemCertPool, continue with an empty pool on error
 	rootCAs, err := x509.SystemCertPool()
