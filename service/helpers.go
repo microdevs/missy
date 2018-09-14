@@ -29,17 +29,17 @@ func TokenHasAccess(r *http.Request, context string, policy string) bool {
 	}
 	// let's assume the claims are map claims because this is what our IAM delivers
 	claims, ok := token.Claims.(jwt.MapClaims)
-	// if the claims do not contain policies return false
 	if !ok {
 		log.Warn("Invalid token format: token claims are not of type jwt.MapClaims")
 		return false
 	}
+	// if the claims do not contain policies return false
 	contextPolicies, ok := claims["policies"].(map[string]interface{})
 	if !ok {
 		log.Warn("Invalid token format: policies inside claims are not of type map[string]interface{}")
 		return false
 	}
-	// if the policies does not contain the context return false
+	// if the policies do not contain the context return false
 	if contextPolicies[context] == nil {
 		return false
 	}

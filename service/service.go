@@ -318,7 +318,7 @@ func (w *ResponseWriter) WriteHeader(code int) {
 }
 
 // WriteMetricsHeader just sets the status code for metrics and logging
-// Useful for example for hijacked ResponseWriter where WriteHeader and Writer are bypassed
+// Useful for example for hijacked ResponseWriter where WriteHeader and Write are bypassed
 func (w *ResponseWriter) WriteMetricsHeader(code int) {
 	w.status = code
 }
