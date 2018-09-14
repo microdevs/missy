@@ -35,3 +35,11 @@ tests_with_cover:
 goveralls: ensure_coverall
 	gover
 	goveralls -coverprofile=gover.coverprofile -service=travis-ci -repotoken $(COVERALLS_TOKEN)
+
+minikube_init: guard_on_minikube
+	go run cmd/main.go init
+
+guard_on_minikube:
+	@ if [ ! "$$(kubectl config current-context)" = "minikube" ]; then  \
+		echo "You cannot execute this command for *$$(kubectl config current-context)*; Please use kube context: *minikube*"; exit 1; \
+	fi;
