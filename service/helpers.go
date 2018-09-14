@@ -23,6 +23,10 @@ func Token(r *http.Request) *jwt.Token {
 // TokenHasAccess checks if a valid access token contains a given policy in a context
 func TokenHasAccess(r *http.Request, context string, policy string) bool {
 	token := Token(r)
+	// return false if there is no token
+	if token == nil {
+		return false
+	}
 	// let's assume the claims are map claims because this is what our IAM delivers
 	claims, ok := token.Claims.(jwt.MapClaims)
 	// if the claims do not contain policies return false

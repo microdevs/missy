@@ -139,6 +139,7 @@ func (s *Service) Start() {
 	// run server in background
 	go func() {
 		certFile, keyFile, useTLS := prepareTLS()
+
 		var err error
 		if useTLS {
 			err = h.ListenAndServeTLS(certFile, keyFile)
