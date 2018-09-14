@@ -45,24 +45,22 @@ func StartTimerHandler(h http.Handler) http.Handler {
 func AuthHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqToken := r.Header.Get("Authorization")
-		if reqToken == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
 		splitToken := strings.Split(reqToken, "Bearer ")
-		reqToken = splitToken[1]
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(reqToken, &claims, func(t *jwt.Token) (interface{}, error) {
-			return pubkey, nil
-		})
-		if err != nil {
-			http.Error(w, "invalid token format", http.StatusBadRequest)
+
+		// check if there is a Bearer token (token will be at index 1)
+		if len(splitToken) < 2 {
+			http.Error(w, "No Authorization Bearer token found", http.StatusBadRequest)
 			return
 		}
 
-		if !token.Valid {
-			log.Warn("Invalid token")
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		// get request bearer token
+		reqToken = splitToken[1]
+		token, err := jwt.Parse(reqToken, func(t *jwt.Token) (interface{}, error) {
+			return pubkey, nil
+		})
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("invalid token: %v", err), http.StatusBadRequest)
 			return
 		}
 
