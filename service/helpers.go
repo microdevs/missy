@@ -31,7 +31,7 @@ func TokenHasAccess(r *http.Request, context string, policy string) bool {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	// if the claims do not contain policies return false
 	if !ok {
-		log.Warn("Invalid token format: token claims are not of type jwt.MaoClaims")
+		log.Warn("Invalid token format: token claims are not of type jwt.MapClaims")
 		return false
 	}
 	contextPolicies, ok := claims["policies"].(map[string]interface{})
