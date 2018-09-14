@@ -145,3 +145,65 @@ func TestFailingHandler(t *testing.T) {
 		http.DefaultServeMux = nil
 	})
 }
+
+type TLSTest struct {
+	Certfile         string
+	Keyfile          string
+	WriteFile        bool
+	Mode             os.FileMode
+	ExpectedCertfile string
+	ExpectedKeyfile  string
+	ExpectedUseTLS   bool
+}
+
+var prepareTLSTestData = []TLSTest{
+	{"/tmp/testcertfile", "/tmp/testkeyfile", true, 0644, "/tmp/testcertfile", "/tmp/testkeyfile", true},
+	{"/tmp/testcertfile", "/tmp/testkeyfile", true, 0000, "", "", false},
+	{"/tmp/testcertfile    ", "   /tmp/testkeyfile", true, 0644, "/tmp/testcertfile", "/tmp/testkeyfile", true},
+	{"/tmp/testcertfile", "/tmp/testkeyfile", false, 0644, "", "", false},
+}
+
+func TestPrepareTLSSuccess(t *testing.T) {
+
+	for i, test := range prepareTLSTestData {
+
+		testCertFile := strings.Trim(test.Certfile, " ")
+		testKeyFile := strings.Trim(test.Keyfile, " ")
+
+		// cleanup before new test
+		os.Chmod(testCertFile, 0644)
+		os.Remove(testCertFile)
+		os.Chmod(testKeyFile, 0644)
+		os.Readlink(testKeyFile)
+
+		t.Logf("Running Test #%d", i+1)
+
+		if test.WriteFile == true {
+			ioutil.WriteFile(testCertFile, []byte("certfile"), 0644)
+			os.Chmod(testCertFile, test.Mode)
+			ioutil.WriteFile(testKeyFile, []byte("keyfile"), 0644)
+			os.Chmod(testKeyFile, test.Mode)
+		}
+
+		os.Setenv("TLS_CERTFILE", test.Certfile)
+		os.Setenv("TLS_KEYFILE", test.Keyfile)
+
+		certFile, keyFile, useTLS := prepareTLS()
+
+		if certFile != test.ExpectedCertfile {
+			t.Logf("Expected certfile to be %s but was %s", test.ExpectedCertfile, certFile)
+			t.Fail()
+		}
+
+		if keyFile != test.ExpectedKeyfile {
+			t.Logf("Expected keyfile to be %s but was %s", test.ExpectedKeyfile, keyFile)
+			t.Fail()
+		}
+
+		if useTLS != test.ExpectedUseTLS {
+			t.Logf("Expected useTLS to be %t but is %t", test.ExpectedUseTLS, useTLS)
+			t.Fail()
+		}
+
+	}
+}

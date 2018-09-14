@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -137,7 +138,14 @@ func (s *Service) Start() {
 	h := &http.Server{Addr: listen, Handler: s.Router}
 	// run server in background
 	go func() {
-		err := h.ListenAndServe()
+		certFile, keyFile, useTLS := prepareTLS()
+		var err error
+		if useTLS {
+			err = h.ListenAndServeTLS(certFile, keyFile)
+		} else {
+			log.Warnf("WARNING! This server starts without transport layer security (TLS) to use it set TLS_CERTFILE and TLS_KEYFILE in environment")
+			err = h.ListenAndServe()
+		}
 		if err != nil {
 			log.Fatalf("Error starting Service due to %v", err)
 		}
@@ -296,7 +304,7 @@ type ResponseWriter struct {
 	headerSet bool
 }
 
-// AdvancedResponseWriter is the MiSSy owned response writer which also handles Hijacker
+// HijackerResponseWriter is the MiSSy owned response writer which also handles Hijacker
 type HijackerResponseWriter struct {
 	*ResponseWriter
 }
@@ -308,7 +316,7 @@ func (w *ResponseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-// Just sets the status code for metrics and logging
+// WriteMetricsHeader just sets the status code for metrics and logging
 // Useful for example for hijacked ResponseWriter where WriteHeader and Writer are bypassed
 func (w *ResponseWriter) WriteMetricsHeader(code int) {
 	w.status = code
@@ -322,7 +330,7 @@ func (w *ResponseWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// Getter for status
+// Status is a getter for status
 func (w *ResponseWriter) Status() int {
 	return w.status
 }
@@ -335,4 +343,31 @@ func (w *ResponseWriter) Header() http.Header {
 // Hijack wrapper for http.Hijacker interface
 func (w *HijackerResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return w.ResponseWriter.ResponseWriter.(http.Hijacker).Hijack()
+}
+
+// prepareTLS will look in the os environment for a certfile and a keyfile
+// both values will be trimmed for trailing or leading spaces and the files will be
+// checked for existence and accessibility. If all is good both file names will be returned and
+// the boolean value useTLS will return true
+func prepareTLS() (certFile string, keyFile string, useTLS bool) {
+	certFile = strings.Trim(os.Getenv("TLS_CERTFILE"), " ")
+	if certFile == "" {
+		log.Debug("TLS Certfile was not set")
+		return "", "", false
+	}
+	if _, err := os.OpenFile(certFile, os.O_RDONLY, 0600); os.IsNotExist(err) || os.IsPermission(err) {
+		log.Warnf("TLS Certfile was set to %s, but cannot be accessed: %s", certFile, err)
+		return "", "", false
+	}
+	keyFile = strings.Trim(os.Getenv("TLS_KEYFILE"), " ")
+	if keyFile == "" {
+		log.Debug("TLS Keyfile was not set")
+		return "", "", false
+	}
+	if _, err := os.OpenFile(keyFile, os.O_RDONLY, 0600); os.IsNotExist(err) || os.IsPermission(err) {
+		log.Warnf("TLS Keyfile was set to %s, but cannot be accessed: %s", keyFile, err)
+		return "", "", false
+	}
+
+	return certFile, keyFile, true
 }
