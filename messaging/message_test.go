@@ -66,8 +66,9 @@ func TestMessage_Sha256String(t *testing.T) {
 		t.Errorf("error during message hashing!: %v", err)
 	}
 
-	if len(hashString) == 0 {
-		t.Error("hash string len is 0!")
+	// sha256 string should be 64 char len
+	if len(hashString) != 64 {
+		t.Errorf("hash string len is no 64! is: %v", len(hashString))
 	}
 }
 
