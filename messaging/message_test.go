@@ -70,3 +70,24 @@ func TestMessage_Sha256String(t *testing.T) {
 		t.Error("hash string len is 0!")
 	}
 }
+
+func TestMessage_Sha256(t *testing.T) {
+	message := Message{
+		Topic:     "topicName",
+		Key:       []byte("key"),
+		Value:     []byte("value"),
+		Time:      time.Now(),
+		Partition: 0,
+		Offset:    12,
+	}
+
+	hashBytes, err := message.Sha256()
+
+	if err != nil {
+		t.Errorf("error during message hashing!: %v", err)
+	}
+
+	if len(hashBytes) == 0 {
+		t.Error("hash bytes len is 0!")
+	}
+}
