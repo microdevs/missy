@@ -26,8 +26,10 @@ func (m Message) Hash(hash hash.Hash) ([]byte, error) {
 	if err := enc.Encode(m); err != nil {
 		return nil, err
 	}
-
-	return hash.Sum(binBuffer.Bytes()), nil
+	if _, err := hash.Write(binBuffer.Bytes()); err != nil {
+		return nil, err
+	}
+	return hash.Sum(nil), nil
 }
 
 // HashString returns string representation of a hash of a Message using provided hash mechanism
