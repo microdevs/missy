@@ -112,11 +112,14 @@ Reader with brokers hosts, group-id and topic
 
 ```go
 reader := messaging.NewReader([]string{"localhost:9092"}, "group-id", "topic")
-err := reader.Read(func(msg Message) error{
-    // do something with msg
-    
-    // return nil or error (if commit should not happen)
-})
+
+go func() {
+    err := reader.Read(func(msg Message) error{
+        // do something with msg
+
+        // return nil or error (if commit should not happen)
+    })
+}()
 
 // remember to close reader after use
 defer reader.Close()
