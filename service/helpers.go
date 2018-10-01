@@ -15,14 +15,18 @@ func Vars(r *http.Request) map[string]string {
 	return mux.Vars(r)
 }
 
-// Token returns the validated auth token from the request context
-func Token(r *http.Request) *jwt.Token {
-	return context.Get(r, "token").(*jwt.Token)
+// token returns the validated auth token from the request context
+func token(r *http.Request) *jwt.Token {
+	t := context.Get(r, "token")
+	if t == (*jwt.Token)(nil) {
+		return nil
+	}
+	return t.(*jwt.Token)
 }
 
 // TokenHasAccess checks if a valid access token contains a given policy in a context
 func TokenHasAccess(r *http.Request, context string, policy string) bool {
-	token := Token(r)
+	token := token(r)
 	// return false if there is no token
 	if token == nil {
 		return false
@@ -63,4 +67,15 @@ func TokenHasAccess(r *http.Request, context string, policy string) bool {
 	}
 	// if the requested policy was not found in the context, the function returns false
 	return false
+}
+
+// TokenIsValid checks if request has a valid token
+func TokenIsValid(r *http.Request) bool {
+	token := token(r)
+	// return false if there is no token
+	if token == nil {
+		return false
+	}
+
+	return token.Valid
 }
