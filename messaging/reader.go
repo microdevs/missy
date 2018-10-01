@@ -114,6 +114,7 @@ func (mr *missyReader) Read(msgFunc ReadMessageFunc) error {
 
 			m, err := mr.brokerReader.FetchMessage(ctx)
 			if err != nil {
+				log.Errorf("# failed to fetch a message: %v", err)
 				break
 			}
 
