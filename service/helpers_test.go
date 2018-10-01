@@ -48,3 +48,24 @@ func TestTokenHasAccess(t *testing.T) {
 		}
 	}
 }
+
+var tokenIsValidCases = []struct {
+	token  *jwt.Token
+	result bool
+}{
+	{&jwt.Token{Valid: false}, false},
+	{&jwt.Token{Valid: true}, true},
+	{&jwt.Token{}, false},
+	{nil, false},
+}
+
+func TestTokenIsValid(t *testing.T) {
+	for _, test := range tokenIsValidCases {
+		r := httptest.NewRequest(http.MethodGet, "/foo", http.NoBody)
+		context.Set(r, "token", test.token)
+		result := TokenIsValid(r)
+		if result != test.result {
+			t.Errorf("Result should be %t but was %t", test.result, result)
+		}
+	}
+}
