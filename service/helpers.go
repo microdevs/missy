@@ -69,11 +69,26 @@ func TokenHasAccess(r *http.Request, context string, policy string) bool {
 	return false
 }
 
-// TokenIsValid checks if request has a valid token
-func TokenIsValid(r *http.Request) bool {
+// IsRequestTokenValid checks if request has a valid token
+func IsRequestTokenValid(r *http.Request) bool {
 	token := token(r)
 	// return false if there is no token
 	if token == nil {
+		return false
+	}
+
+	return token.Valid
+}
+
+// IsSignedTokenValid checks if provided signed token string is valid
+func IsSignedTokenValid(signedToken string) bool {
+	initPublicKey()
+	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (interface{}, error) {
+		return pubkey, nil
+	})
+
+	if err != nil {
+		log.Warnf("cannot pars jwt token: %v", err)
 		return false
 	}
 
