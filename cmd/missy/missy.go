@@ -16,6 +16,11 @@ import (
 	"time"
 )
 
+type CompagnionService interface {
+	Configure() error
+	Run() error
+}
+
 var configDir = func() string {
 	home := os.Getenv("HOME")
 	if home == "" {
@@ -56,7 +61,7 @@ func CreateRootCA() {
 		NotAfter:  notAfter,
 
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA: true,
 
@@ -88,7 +93,7 @@ func CreateRootCA() {
 
 }
 
-func CreateCertFromCA(name, rootCertFile, rootKeyFile, o, ou, cn, country, province string, isCA bool) {
+func CreateCertFromCA(name, rootCertFile, rootKeyFile, o, ou, cn, country, province string, isCA bool, dnsNames []string) {
 	// Load CA
 	root, err := tls.LoadX509KeyPair(configDir+"/"+rootCertFile, configDir+"/"+rootKeyFile)
 	if err != nil {
@@ -124,8 +129,9 @@ func CreateCertFromCA(name, rootCertFile, rootKeyFile, o, ou, cn, country, provi
 		NotAfter:  notAfter,
 
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
+		DNSNames: dnsNames,
 	}
 
 	if isCA {

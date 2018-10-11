@@ -4,14 +4,25 @@ import (
 	"fmt"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
+	typed "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/azure"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
+	"github.com/microdevs/missy/log"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"strings"
-	"github.com/microdevs/missy/log"
 	"time"
 )
+
+type ResourceClient interface {
+	Create(name string, data map[string][]byte) (typed.ScaleInterface, error)
+	Get(name string) (typed.ScaleInterface, error)
+	Delete(name string) error
+}
 
 var kubeconfig *string
 
@@ -24,7 +35,10 @@ func InitializeBaseSystem(kcfg *string) {
 	// RunConsul()
 }
 
-func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, volumes []apiv1.Volume, volumeMounts []apiv1.VolumeMount, containerPorts []apiv1.ContainerPort, servicePorts []apiv1.ServicePort, tier string, securityContext *apiv1.SecurityContext) {
+
+func Deploy(name string, namespace string, appName string, image string, args []string, envVars []apiv1.EnvVar, volumes []apiv1.Volume, volumeMounts []apiv1.VolumeMount, containerPorts []apiv1.ContainerPort, servicePorts []apiv1.ServicePort, tier string, securityContext *apiv1.SecurityContext) {
+
+	EnsureNamespace(namespace)
 
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
@@ -34,11 +48,15 @@ func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, v
 	if err != nil {
 		panic(err)
 	}
-	deploymentsClient := clientset.AppsV1beta1().Deployments(apiv1.NamespaceDefault)
+
+
+
+	deploymentsClient := clientset.AppsV1beta1().Deployments(namespace)
 
 	deployment := &appsv1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+			Namespace: namespace,
 		},
 		Spec: appsv1beta1.DeploymentSpec{
 			Replicas: int32Ptr(1),
@@ -59,6 +77,7 @@ func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, v
 							Env: envVars,
 							VolumeMounts: volumeMounts,
 							SecurityContext: securityContext,
+							Args: args,
 						},
 					},
 					Volumes: volumes,
@@ -95,30 +114,12 @@ func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, v
 
 	fmt.Println("Creating Service ...")
 
-	serviceClient := clientset.CoreV1().Services("default")
+	serviceClient := clientset.CoreV1().Services(namespace)
 
-	service := &apiv1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"app":  appName,
-				"tier": tier,
-			},
-		},
-		Spec: apiv1.ServiceSpec{
-			Type:  apiv1.ServiceTypeClusterIP,
-			Ports: servicePorts,
-			Selector: map[string]string{
-				"name": name,
-			},
-		},
-	}
+	service := prepareService(name, appName, tier, servicePorts, apiv1.ServiceTypeClusterIP)
 
-	err = serviceClient.Delete(service.Name, &metav1.DeleteOptions{})
+	err = serviceClient.Delete(service.Name, &metav1.DeleteOptions{
+	})
 	if err != nil {
 		if !strings.Contains(err.Error(), "not found") {
 			log.Panicf("Error deleting existing service: %s", err)
@@ -137,7 +138,6 @@ func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, v
 		}
 	}
 
-
 	_, err = serviceClient.Create(service)
 	if err != nil {
 		fmt.Errorf("failed to create service: %s", err)
@@ -146,4 +146,55 @@ func deploy(name string, appName string, image string, envVars []apiv1.EnvVar, v
 	fmt.Println("service created")
 }
 
-func int32Ptr(i int32) *int32 { return &i }
+
+func prepareService(name string, appName string, tier string, servicePorts []apiv1.ServicePort, serviceType apiv1.ServiceType) *apiv1.Service {
+
+	s :=  &apiv1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: apiv1.ServiceSpec{
+			Ports: servicePorts,
+			Selector: map[string]string{
+				"app": appName,
+			},
+		},
+	}
+
+	switch serviceType {
+	case apiv1.ClusterIPNone:
+		s.Spec.ClusterIP = apiv1.ClusterIPNone
+	default:
+		s.Spec.Type = apiv1.ServiceTypeClusterIP
+	}
+
+	return s
+}
+
+func GetStorageClasses(kcfg *string) ([]v1beta1.StorageClass, error) {
+	kubeconfig = kcfg
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	clientset, err := k8s.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	var classes []v1beta1.StorageClass
+
+	storageClassList, err := clientset.StorageV1beta1().StorageClasses().List(metav1.ListOptions{})
+	if err != nil {
+		return classes, err
+	}
+
+	for _,sc := range storageClassList.Items {
+		classes = append(classes, sc)
+	}
+	return classes, nil
+}
