@@ -34,14 +34,19 @@ var tokenHasAccessTestCases = []struct {
 	{&jwt.Token{Claims: jwt.MapClaims{"policies": "not a map"}}, "default", "policy1", false},
 	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []int{1, 2, 3}}}}, "default", "policy1", false},
 	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{1, true, 0.283, "foo"}}}}, "default", "policy1", false},
+	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{1, true, 0.283, "foo"}}}}, "", "policy1", false},
+	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{}}}, "", "", false},
+	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "", true},
+	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "policy", false},
 }
 
 func TestTokenHasAccess(t *testing.T) {
 	// loop through the test cases specified above
 	for _, test := range tokenHasAccessTestCases {
 		r := httptest.NewRequest(http.MethodGet, "/foo", strings.NewReader("foobar"))
+		r.Header.Set("context", test.Context)
 		context.Set(r, "token", test.Token)
-		result := TokenHasAccess(r, test.Context, test.Policy)
+		result := TokenHasAccess(r, test.Policy)
 		if result != test.ExpectedResult {
 			t.Logf("Result should be %t but was %t", test.ExpectedResult, result)
 			t.Fail()

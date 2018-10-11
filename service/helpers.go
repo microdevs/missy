@@ -25,7 +25,7 @@ func token(r *http.Request) *jwt.Token {
 }
 
 // TokenHasAccess checks if a valid access token contains a given policy in a context
-func TokenHasAccess(r *http.Request, context string, policy string) bool {
+func TokenHasAccess(r *http.Request, policy string) bool {
 	token := token(r)
 	// return false if there is no token
 	if token == nil {
@@ -38,23 +38,26 @@ func TokenHasAccess(r *http.Request, context string, policy string) bool {
 		return false
 	}
 	// if the claims do not contain policies return false
-	contextPolicies, ok := claims["policies"].(map[string]interface{})
+	tokenPolicies, ok := claims["policies"].(map[string]interface{})
 	if !ok {
 		log.Warn("Invalid token format: policies inside claims are not of type map[string]interface{}")
 		return false
 	}
-	// if the policies do not contain the context return false
-	if contextPolicies[context] == nil {
-		return false
-	}
-	policies, ok := contextPolicies[context].([]interface{})
+
+	// get header context for policy checks
+	// if no context, will be empty sting
+	ctx := r.Header.Get("context")
+
+	policies := tokenPolicies[ctx]
+
+	policiesSlice, ok := policies.([]interface{})
 	if !ok {
 		log.Warn("Invalid token format: Policy context value does not match type []interface{}")
 		return false
 	}
 	// look for the policy that matches the requested policy
 	// if found return true
-	for _, p := range policies {
+	for _, p := range policiesSlice {
 		ps, ok := p.(string)
 		// if policy cannot asserted to type string we silently skip this entry
 		if !ok {
