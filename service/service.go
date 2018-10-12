@@ -100,25 +100,25 @@ func init() {
 		}
 		os.Exit(0)
 	}
+	//todo: refactor this to LISTEN_ADDRESS
+	Config().RegisterOptionalParameter("LISTEN_HOST", "0.0.0.0", "service.listen.host", "The address the service listens on")
+	Config().RegisterOptionalParameter("LISTEN_PORT", "8080", "service.listen.port", "The port the service listens on")
+	Config().Parse()
 }
 
 // New returns a new Service object
 func New(name string) *Service {
 
-	if _, present := os.LookupEnv("LISTEN_HOST"); present {
-		listenHost = os.Getenv("LISTEN_HOST")
+	// check if name has at least one character
+	if len(name) < 1 {
+		log.Fatal("Unnamed services are not allowed, passed an empty string as name")
 	}
-
-	if _, present := os.LookupEnv("LISTEN_PORT"); present {
-		listenPort = os.Getenv("LISTEN_PORT")
-	}
-
 	Config().Name = name
 
 	s := &Service{
 		name:       name,
-		Host:       listenHost,
-		Port:       listenPort,
+		Host:       Config().Get("service.listen.host"),
+		Port:       Config().Get("service.listen.port"),
 		Prometheus: NewPrometheus(name),
 		Router:     mux.NewRouter(),
 		ServeMux:   http.NewServeMux(),
