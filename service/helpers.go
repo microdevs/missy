@@ -93,6 +93,11 @@ func IsRequestTokenValid(r *http.Request) bool {
 // IsSignedTokenValid checks if provided signed token string is valid
 func IsSignedTokenValid(signedToken string) bool {
 	initPublicKey()
+	if pubkey == nil {
+		log.Error("No public key is set to validate the token.")
+		return false
+	}
+
 	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (interface{}, error) {
 		return pubkey, nil
 	})

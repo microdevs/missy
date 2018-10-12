@@ -41,12 +41,17 @@ func (c *Configuration) RegisterOptionalParameter(envName string, defaultValue s
 // mandatory this function will collect all missing parameters in a list and exits the program with a usage message.
 // This function can be called multiple times.
 func (c *Configuration) Parse() {
+	c.ParseEnvironment(false)
+}
 
+// ParseEnvironment allows to parse all environment parameters again, this will result in some log entries
+// but does no harm, useful for testing if you set env vars in your tests but Parse() did already run
+func (c *Configuration) ParseEnvironment(parseAll bool) {
 	var failedParameters []EnvParameter
 	// loop through registered parameters and try to find them in env
 	for k, parameter := range c.Environment {
 
-		if parameter.Parsed {
+		if parameter.Parsed && !parseAll {
 			continue
 		}
 
