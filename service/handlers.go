@@ -9,26 +9,37 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
-	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
 )
 
 var pubkey *rsa.PublicKey
+
+func init() {
+	Config().RegisterOptionalParameter("TOKEN_CA_FILE", "", "service.token.ca.file", "Set the location to the certificate used to validate the JWT tokens")
+	Config().Parse()
+	initPublicKey()
+}
 
 func initPublicKey() {
 	if pubkey != nil {
 		return
 	}
 
-	pubkeyLocation := config.GetInstance().Authorization.PublicKeyFile
+	pubkeyLocation := Config().Get("service.token.ca.file")
+	if pubkeyLocation == "" {
+		log.Warnf("No location for the public key for token auth was set - secure handlers will not work")
+		return
+	}
 	pubkeyPEM, err := ioutil.ReadFile(pubkeyLocation)
 	if err != nil {
-		log.Fatal("Unable to load public key file for token auth: ", err)
+		log.Errorf("Unable to load public key file for token auth: ", err)
+		return
 	}
 
 	pkey, err := jwt.ParseRSAPublicKeyFromPEM(pubkeyPEM)
 	if err != nil {
-		log.Fatal("Unable to parse public key for token auth: ", err)
+		log.Errorf("Unable to parse public key for token auth: ", err)
+		return
 	}
 	pubkey = pkey
 }
@@ -44,6 +55,13 @@ func StartTimerHandler(h http.Handler) http.Handler {
 // AuthHandler is a middleware to authenticating a user or machine by validating an JWT auth token passed in the header of the request
 func AuthHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if pubkey == nil {
+			log.Error("Secure handler was called but public ca file is missing")
+			http.Error(w, "This handler is unavailable due to a configuration error", http.StatusInternalServerError)
+			return
+		}
+
 		reqToken := r.Header.Get("Authorization")
 		splitToken := strings.Split(reqToken, "Bearer ")
 
@@ -58,9 +76,9 @@ func AuthHandler(h http.Handler) http.Handler {
 		token, err := jwt.Parse(reqToken, func(t *jwt.Token) (interface{}, error) {
 			return pubkey, nil
 		})
-
 		if err != nil {
-			http.Error(w, fmt.Sprintf("invalid token: %v", err), http.StatusBadRequest)
+			log.Warnf("invalid token: %v", err)
+			http.Error(w, "Unauthorized", http.StatusForbidden)
 			return
 		}
 

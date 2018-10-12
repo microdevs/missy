@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"fmt"
+	"github.com/microdevs/missy/service"
 	"testing"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 
 	"github.com/bouk/monkey"
 	"github.com/golang/mock/gomock"
-	"github.com/microdevs/missy/config"
 	"github.com/pkg/errors"
 	"github.com/segmentio/kafka-go"
 )
@@ -233,7 +233,7 @@ func TestReadBroker_FetchMessage(t *testing.T) {
 }
 
 func monkeyPatchConfig() {
-	monkey.Patch(config.Get, func(name string) string {
+	monkey.Patch(service.Config().Get, func(name string) string {
 		return ""
 	})
 }

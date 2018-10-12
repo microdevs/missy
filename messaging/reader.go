@@ -3,12 +3,12 @@ package messaging
 import (
 	"context"
 	"errors"
+	"github.com/microdevs/missy/service"
 	"io"
 
 	"strconv"
 	"time"
 
-	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
 	"github.com/segmentio/kafka-go"
 )
@@ -212,13 +212,9 @@ func (mr *missyReader) Close() error {
 }
 
 func fetchRetriesAndInterval() (int, time.Duration) {
-	retries, err := strconv.Atoi(config.Get("kafka.retries.max.number"))
-	if retries <= 0 || err != nil {
-		log.Debug("Setting retries number to 3, as kafka.retries.max.number was not set or wrong")
-		retries = 3
-	}
+	retries, err := strconv.Atoi(service.Config().Get("kafka.retries.max.number"))
 	var intervalTime time.Duration
-	interval, err := strconv.Atoi(config.Get("kafka.retries.interval.ms"))
+	interval, err := strconv.Atoi(service.Config().Get("kafka.retries.interval.ms"))
 	if interval <= 0 || err != nil {
 		log.Debug("Setting retries interval to 5000 ms, as kafka.retries.interval.ms was not set or wrong")
 		intervalTime = 5000 * time.Millisecond
