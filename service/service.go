@@ -20,7 +20,6 @@ import (
 
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
-	"github.com/microdevs/missy/config"
 	"github.com/microdevs/missy/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -80,19 +79,19 @@ const FlagMissyControllerUsage = "The address of the MiSSy controller"
 
 // init checks for init flag and executes the service registration with the missy controller if applicable
 func init() {
+
 	initCmd := flag.NewFlagSet("init", flag.ExitOnError)
 	initCmd.StringVar(&controllerAddr, "addr", FlagMissyControllerAddressDefault, FlagMissyControllerUsage)
 	initCmd.StringVar(&controllerAddr, "a", FlagMissyControllerAddressDefault, FlagMissyControllerUsage+" (Shorthand)")
 
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		initCmd.Parse(os.Args[2:])
-		c := config.GetInstance()
-		cjson, jsonErr := json.Marshal(c)
+		cjson, jsonErr := json.Marshal(Config())
 		if jsonErr != nil {
 			fmt.Println("Error marshalling config to json.")
 			os.Exit(1)
 		}
-		log.Infof("Registering service %s with MiSSy controller at %s", c.Name, controllerAddr)
+		log.Infof("Registering service %s with MiSSy controller at %s", Config().Name, controllerAddr)
 		_, err := http.Post(controllerAddr+"/registerService", "application/json", bytes.NewReader(cjson))
 		// todo: check response for return status
 		if err != nil {
@@ -101,11 +100,10 @@ func init() {
 		}
 		os.Exit(0)
 	}
-
 }
 
 // New returns a new Service object
-func New() *Service {
+func New(name string) *Service {
 
 	if _, present := os.LookupEnv("LISTEN_HOST"); present {
 		listenHost = os.Getenv("LISTEN_HOST")
@@ -115,13 +113,13 @@ func New() *Service {
 		listenPort = os.Getenv("LISTEN_PORT")
 	}
 
-	c := config.GetInstance()
+	Config().Name = name
 
 	s := &Service{
-		name:       c.Name,
+		name:       name,
 		Host:       listenHost,
 		Port:       listenPort,
-		Prometheus: NewPrometheus(c.Name),
+		Prometheus: NewPrometheus(name),
 		Router:     mux.NewRouter(),
 		ServeMux:   http.NewServeMux(),
 	}

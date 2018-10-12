@@ -47,7 +47,7 @@ func TokenHasAccess(r *http.Request, policy string) bool {
 
 	tokenPolicies := make(map[string][]interface{})
 
-	for k, _ := range policiesInterfaces {
+	for k := range policiesInterfaces {
 		tokenPolicies[k], ok = policiesInterfaces[k].([]interface{})
 		if !ok {
 			log.Warn("Invalid token format: policies inside claims are not of type map[string][]interface{}")
