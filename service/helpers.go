@@ -1,9 +1,10 @@
 package service
 
 import (
-	"github.com/microdevs/missy/log"
 	"net/http"
 	"reflect"
+
+	"github.com/microdevs/missy/log"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
@@ -38,26 +39,32 @@ func TokenHasAccess(r *http.Request, policy string) bool {
 		return false
 	}
 	// if the claims do not contain policies return false
-	tokenPolicies, ok := claims["policies"].(map[string]interface{})
+	policiesInterfaces, ok := claims["policies"].(map[string]interface{})
 	if !ok {
 		log.Warn("Invalid token format: policies inside claims are not of type map[string]interface{}")
 		return false
 	}
 
+	tokenPolicies := make(map[string][]interface{})
+
+	for k, _ := range policiesInterfaces {
+		tokenPolicies[k], ok = policiesInterfaces[k].([]interface{})
+		if !ok {
+			log.Warn("Invalid token format: policies inside claims are not of type map[string][]interface{}")
+			return false
+		}
+	}
 	// get header context for policy checks
 	// if no context, will be empty sting
 	ctx := r.Header.Get("context")
 
 	policies := tokenPolicies[ctx]
-
-	policiesSlice, ok := policies.([]interface{})
-	if !ok {
-		log.Warn("Invalid token format: Policy context value does not match type []interface{}")
-		return false
+	// append empty context policies
+	if ctx != "" && len(tokenPolicies[""]) > 0 {
+		policies = append(policies, tokenPolicies[""]...)
 	}
-	// look for the policy that matches the requested policy
-	// if found return true
-	for _, p := range policiesSlice {
+
+	for _, p := range policies {
 		ps, ok := p.(string)
 		// if policy cannot asserted to type string we silently skip this entry
 		if !ok {
