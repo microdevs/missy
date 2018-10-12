@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/context"
 )
 
 func TestSecureHandlerAuth(t *testing.T) {
@@ -21,6 +22,22 @@ func TestSecureHandlerAuth(t *testing.T) {
 
 		s := New()
 		s.SecureHandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+
+			// expect claims to be populated in context
+			claims := context.Get(r, ContextClaims)
+
+			username := claims.(jwt.MapClaims)[ClaimUsername].(string)
+			userId := claims.(jwt.MapClaims)[ClaimUserId].(float64)
+
+			if username != "test@test.de" {
+				t.Log(fmt.Sprintf("claims username is expected to be test@test.de but is %s", username))
+				t.Fail()
+			}
+
+			if userId != 526 {
+				t.Log(fmt.Sprintf("claims userId is expected to be 526 but is %v", userId))
+				t.Fail()
+			}
 			w.Write([]byte("test"))
 		})
 		s.Router.ServeHTTP(w, r)
