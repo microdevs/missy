@@ -97,3 +97,26 @@ func IsSignedTokenValid(signedToken string) bool {
 
 	return token.Valid
 }
+
+// TokenClaims get token claims
+func TokenClaims(r *http.Request) map[string]interface{} {
+	token := token(r)
+	// return false if there is no token
+	if token == nil {
+		return nil
+	}
+
+	claimsInterface, ok := token.Claims.(interface{})
+	if !ok {
+		log.Warn("Cannot cast token claims to interface")
+		return nil
+	}
+
+	claimsMap, ok := claimsInterface.(map[string]interface{})
+	if !ok {
+		log.Warn("Cannot cast token claims to map[string]interface{}")
+		return nil
+	}
+
+	return claimsMap
+}

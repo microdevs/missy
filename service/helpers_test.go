@@ -92,3 +92,29 @@ func TestIsSignedTokenNotValid(t *testing.T) {
 		}
 	})
 }
+
+var tokenClaimsTestCases = []struct {
+	Token *jwt.Token
+	Claim map[string]interface{}
+}{
+	{&jwt.Token{Claims: jwt.MapClaims{}}, map[string]interface{}{}},
+	{&jwt.Token{}, nil},
+	{&jwt.Token{Claims: jwt.MapClaims{"test": "test"}}, map[string]interface{}{"test": "test"}},
+	{&jwt.Token{Claims: jwt.MapClaims{"test": map[string]string{"t2": "v2"}}}, map[string]interface{}{"test": map[string]string{"t2": "v2"}}},
+	{nil, nil},
+}
+
+func TestTokenClaims(t *testing.T) {
+	// loop through the test cases specified above
+	for _, test := range tokenClaimsTestCases {
+		r := httptest.NewRequest(http.MethodGet, "/foo", strings.NewReader("foobar"))
+		context.Set(r, "token", test.Token)
+		result := TokenClaims(r)
+		for i, c := range result {
+			if c != test.Claim[i] {
+				t.Logf("Result should be %v but was %v", test.Claim[i], c)
+				t.Fail()
+			}
+		}
+	}
+}
