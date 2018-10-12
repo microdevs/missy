@@ -11,7 +11,7 @@ var config *Configuration
 var once sync.Once
 
 // Config returns the singleton  instance of the service configuration
-// We explicitly don't want to do this on the first call of Config() to avoid race consitions,
+// We explicitly don't want to do this on the first call of Config() to avoid race conditions,
 // because other parts of the application register parameters in their init functions.
 func Config() *Configuration {
 	once.Do(func() {
