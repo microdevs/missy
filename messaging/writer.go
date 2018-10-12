@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -38,7 +39,7 @@ func (wb *writeBroker) WriteMessages(ctx context.Context, msgs ...Message) error
 	kafkaMessages := make([]kafka.Message, len(msgs))
 
 	for i, m := range msgs {
-		kMessage := kafka.Message{Key: m.Key, Value: m.Value}
+		kMessage := kafka.Message{Key: m.Key, Value: m.Value, Time: m.Time}
 		kafkaMessages[i] = kMessage
 	}
 
@@ -66,9 +67,11 @@ func NewWriter(brokers []string, topic string) Writer {
 
 // Write new message
 func (mw *missyWriter) Write(key []byte, value []byte) error {
+
 	msg := Message{
 		Key:   key,
 		Value: value,
+		Time:  time.Now().UTC(),
 	}
 	return mw.brokerWriter.WriteMessages(context.Background(), msg)
 }

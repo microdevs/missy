@@ -122,7 +122,11 @@ err := reader.Read(func(msg Message) error{
 defer reader.Close()
 ```
 
-Writer with brokers hosts and topic
+#####Dead letter queue
+
+If you need to save messages that couldn't be processed, you have to use constructor NewReaderWithDLQ which takes name of DLQ topic as additional parameter.
+
+#####Writer with brokers hosts and topic
 
 ```go
 writer := messaging.NewWriter([]string{"localhost:9092"}, "topic")
@@ -131,3 +135,4 @@ err := writer.Write([]byte("key"), []byte("value"))
 // remember to close writer after use
 defer writer.Close()
 ```
+

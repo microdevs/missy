@@ -3,12 +3,14 @@ package messaging
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 	"time"
 
+	"reflect"
+
 	"github.com/bouk/monkey"
 	"github.com/golang/mock/gomock"
+	"github.com/microdevs/missy/config"
 	"github.com/pkg/errors"
 	"github.com/segmentio/kafka-go"
 )
@@ -18,6 +20,8 @@ func expected(expected string, value string) string {
 }
 
 func TestNewReader(t *testing.T) {
+	monkeyPatchConfig()
+
 	r := NewReader([]string{"localhost:9091"}, "", "test")
 
 	readerType := reflect.TypeOf((*Reader)(nil)).Elem()
@@ -80,24 +84,9 @@ func TestReader_ReadErrorOnFetch(t *testing.T) {
 	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).AnyTimes().Return(*msg, errors.New("ferch error"))
 	brokerReaderMock.EXPECT().Close().Return(nil)
 
-	reader := missyReader{brokerReader: brokerReaderMock}
+	reader := missyReader{brokerReader: brokerReaderMock, maxRetries: 1}
 
 	readFunc := func(msg Message) error {
-		if msg.Topic != "test" {
-			t.Error(expected(msg.Topic, "test"))
-		}
-		if string(msg.Key) != "key" {
-			t.Error(expected(string(msg.Key), "key"))
-		}
-		if string(msg.Value) != "value" {
-			t.Error(expected(string(msg.Value), "value"))
-		}
-		if msg.Partition != 0 {
-			t.Error(expected(string(msg.Partition), string(0)))
-		}
-		if msg.Offset != 0 {
-			t.Error(expected(string(msg.Offset), string(0)))
-		}
 		return nil
 	}
 
@@ -149,14 +138,18 @@ func TestMissyReader_ReadErrorOnCommit(t *testing.T) {
 	time.Sleep(time.Millisecond)
 }
 
-func TestMissyReader_ReadErrorOnReadFunc(t *testing.T) {
+func TestMissyReader_ReadErrorOnReadFuncShouldWriteToDLQAndCommitMsg(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	brokerReaderMock := NewMockBrokerReader(mockCtrl)
-	msg := &Message{Topic: "test", Key: []byte("key"), Value: []byte("value"), Partition: 0, Offset: 0}
+	key := []byte("key")
+	value := []byte("value")
+	msg := &Message{Topic: "test", Key: key, Value: value, Partition: 0, Offset: 0}
 	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).AnyTimes().Return(*msg, nil)
 	brokerReaderMock.EXPECT().Close().Return(nil)
-
-	reader := missyReader{brokerReader: brokerReaderMock}
+	dlqWriterMock := NewMockWriter(mockCtrl)
+	dlqWriterMock.EXPECT().Write(key, value).MinTimes(1).Return(nil)
+	brokerReaderMock.EXPECT().CommitMessages(gomock.Any(), gomock.Any()).AnyTimes()
+	reader := missyReader{brokerReader: brokerReaderMock, maxRetries: 1, dlqWriter: dlqWriterMock}
 
 	readFunc := func(msg Message) error {
 		return errors.New("error")
@@ -188,6 +181,7 @@ func TestMissyReader_Close(t *testing.T) {
 }
 
 func TestReadBroker_FetchMessage(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -238,7 +232,14 @@ func TestReadBroker_FetchMessage(t *testing.T) {
 
 }
 
+func monkeyPatchConfig() {
+	monkey.Patch(config.Get, func(name string) string {
+		return ""
+	})
+}
+
 func TestReadBroker_FetchMessage_Error(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -269,6 +270,7 @@ func TestReadBroker_FetchMessage_Error(t *testing.T) {
 }
 
 func TestReadBroker_ReadMessage(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -315,6 +317,7 @@ func TestReadBroker_ReadMessage(t *testing.T) {
 }
 
 func TestReadBroker_ReadMessage_Error(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -345,6 +348,7 @@ func TestReadBroker_ReadMessage_Error(t *testing.T) {
 }
 
 func TestReadBroker_CommitMessages(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -382,6 +386,7 @@ func TestReadBroker_CommitMessages(t *testing.T) {
 }
 
 func TestReadBroker_CommitMessages_Error(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -419,6 +424,7 @@ func TestReadBroker_CommitMessages_Error(t *testing.T) {
 }
 
 func TestReadBroker_Close(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -450,6 +456,7 @@ func TestReadBroker_Close(t *testing.T) {
 }
 
 func TestReadBroker_Close_Error(t *testing.T) {
+	monkeyPatchConfig()
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
@@ -478,4 +485,28 @@ func TestReadBroker_Close_Error(t *testing.T) {
 		t.Error("there should be error in Close call")
 	}
 
+}
+
+func TestReadBroker_FailingMessageShouldBeSendToDLQ(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	brokerReaderMock := NewMockBrokerReader(mockCtrl)
+	dlqWriterMock := NewMockWriter(mockCtrl)
+	key := []byte("key")
+	value := []byte("value")
+	msg := &Message{Topic: "test", Key: key, Value: value, Partition: 0, Offset: 0}
+	brokerReaderMock.EXPECT().CommitMessages(gomock.Any(), *msg).AnyTimes().Return(nil)
+	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).AnyTimes().Return(*msg, nil)
+	reader := &missyReader{brokerReader: brokerReaderMock, dlqWriter: dlqWriterMock, retriesInterval: 1 * time.Second, maxRetries: 1}
+	readFunc := func(msg Message) error {
+		return errors.New("error")
+	}
+
+	//main check, we just want to know that dlqWriterMock was called
+	dlqWriterMock.EXPECT().Write(key, value).Return(nil)
+
+	reader.Read(readFunc)
+
+	time.Sleep(3 * time.Second)
+	mockCtrl.Finish()
 }

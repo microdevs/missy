@@ -1,8 +1,9 @@
 package log
 
 import (
-	l "github.com/sirupsen/logrus"
 	"os"
+
+	l "github.com/sirupsen/logrus"
 )
 
 // init logrus with environment values for log level and log format
