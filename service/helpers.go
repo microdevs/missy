@@ -113,15 +113,9 @@ func TokenClaims(r *http.Request) map[string]interface{} {
 		return nil
 	}
 
-	claimsInterface, ok := token.Claims.(interface{})
+	claimsMap, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		log.Warn("Cannot cast token claims to interface")
-		return nil
-	}
-
-	claimsMap, ok := claimsInterface.(map[string]interface{})
-	if !ok {
-		log.Warn("Cannot cast token claims to map[string]interface{}")
+		log.Warn("Cannot cast token claims to jwt.MapClaims")
 		return nil
 	}
 

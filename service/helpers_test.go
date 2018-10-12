@@ -112,7 +112,7 @@ func TestTokenClaims(t *testing.T) {
 		context.Set(r, "token", test.Token)
 		result := TokenClaims(r)
 		for i, c := range result {
-			if c != test.Claim[i] {
+			if reflect.DeepEqual(c, test.Claim[i]) != true {
 				t.Logf("Result should be %v but was %v", test.Claim[i], c)
 				t.Fail()
 			}
