@@ -27,6 +27,7 @@ func TestNewServiceWithDifferentHostPort(t *testing.T) {
 	testport := "666"
 	os.Setenv("LISTEN_HOST", testhost)
 	os.Setenv("LISTEN_PORT", testport)
+	Config().ParseEnvironment(true)
 
 	s := New("test")
 
