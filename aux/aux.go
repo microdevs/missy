@@ -6,9 +6,10 @@ import (
 	"github.com/microdevs/missy/service"
 )
 
+// Messaging refers to the kafka package
 const Messaging = "messaging"
 
-// Use will enable auxiliary modules
+// Use will enable auxiliary packages
 func Use(auxiliaries ...string) {
 	for _, a := range auxiliaries {
 		switch a {

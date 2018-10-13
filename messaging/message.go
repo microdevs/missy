@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Message is a Kafka message
 type Message struct {
 	Topic     string
 	Key       []byte
@@ -43,12 +44,12 @@ func (m Message) HashString(hash hash.Hash) (string, error) {
 	return hex.EncodeToString(hashBytes), nil
 }
 
-// Hash returns bytes array of a hash of a Message using Sha256 hash mechanism
+// Sha256 returns bytes array of a hash of a Message using Sha256 hash mechanism
 func (m Message) Sha256() ([]byte, error) {
 	return m.Hash(sha256.New())
 }
 
-// HashString returns string representation of a hash of a Message Sha256 hash mechanism
+// Sha256String returns string representation of a hash of a Message Sha256 hash mechanism
 func (m Message) Sha256String() (string, error) {
 	return m.HashString(sha256.New())
 }

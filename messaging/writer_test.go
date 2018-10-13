@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 	tm "time"
@@ -131,7 +130,7 @@ func TestWriteBroker_WriteMessages(t *testing.T) {
 	// using monkey patching to patch underlying function call (https://github.com/bouk/monkey)
 	monkey.PatchInstanceMethod(reflect.TypeOf(kw), "WriteMessages", func(_ *kafka.Writer, ctx context.Context, messages ...kafka.Message) error {
 		if len(msgs) != len(messages) {
-			t.Error(fmt.Sprintf("invalid messages length: expected: %v, got %v", len(msgs), len(messages)))
+			t.Errorf("invalid messages length: expected: %v, got %v", len(msgs), len(messages))
 		}
 
 		exec = true

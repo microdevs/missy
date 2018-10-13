@@ -114,6 +114,7 @@ func NewReader(brokers []string, groupID string, topic string) Reader {
 	}
 }
 
+// NewReaderWithDLQ a reader with DLQ
 func NewReaderWithDLQ(brokers []string, groupID string, topic string, dlqTopic string) Reader {
 	kafkaReader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:        brokers,
@@ -213,11 +214,15 @@ func (mr *missyReader) Close() error {
 
 func fetchRetriesAndInterval() (int, time.Duration) {
 	retries, err := strconv.Atoi(service.Config().Get("kafka.retries.max.number"))
+	if retries <= 0 || err != nil {
+		log.Debug("Setting number of retries to 3, as kafka.retries.max.number not an int value")
+		retries = defaultKafkaMaxRetries
+	}
 	var intervalTime time.Duration
 	interval, err := strconv.Atoi(service.Config().Get("kafka.retries.interval.ms"))
 	if interval <= 0 || err != nil {
-		log.Debug("Setting retries interval to 5000 ms, as kafka.retries.interval.ms was not set or wrong")
-		intervalTime = 5000 * time.Millisecond
+		log.Debug("Setting retries interval to 5000 ms, as kafka.retries.interval.ms was not an int value")
+		intervalTime = defaultKafkaRetriesIntervalMS * time.Millisecond
 	}
 	return retries, intervalTime
 }
