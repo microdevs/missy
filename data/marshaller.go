@@ -45,6 +45,7 @@ func MarshalWithCode(w http.ResponseWriter, r *http.Request, data interface{}, s
 		} else {
 			resp, err = xml.Marshal(data)
 		}
+		break
 	default:
 		contentType = contentTypeJSON
 		resp, err = json.Marshal(data)

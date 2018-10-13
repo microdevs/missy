@@ -32,13 +32,13 @@ func initPublicKey() {
 	}
 	pubkeyPEM, err := ioutil.ReadFile(pubkeyLocation)
 	if err != nil {
-		log.Errorf("Unable to load public key file for token auth: ", err)
+		log.Errorf("Unable to load public key file for token auth: %s", err)
 		return
 	}
 
 	pkey, err := jwt.ParseRSAPublicKeyFromPEM(pubkeyPEM)
 	if err != nil {
-		log.Errorf("Unable to parse public key for token auth: ", err)
+		log.Errorf("Unable to parse public key for token auth: %s", err)
 		return
 	}
 	pubkey = pkey
