@@ -41,9 +41,6 @@ type Shutdowner interface {
 	Shutdown(ctx context.Context) error
 }
 
-// signals is the channel used to signal shutdown
-var signals chan os.Signal
-
 type key int
 
 // PrometheusInstance is a key for the context value of the PrometheusHolder
@@ -67,8 +64,6 @@ type Service struct {
 	ServeMux   *http.ServeMux
 }
 
-var listenPort = "8080"
-var listenHost = "localhost"
 var controllerAddr string
 
 // FlagMissyControllerAddressDefault is a default for the missy-controller url used in the during service initialisation when given the init flag
@@ -101,11 +96,13 @@ func init() {
 		os.Exit(0)
 	}
 	//todo: refactor this to LISTEN_ADDRESS
+	// TODO remove after components integration everywhere
 	Config().RegisterOptionalParameter("LISTEN_HOST", "0.0.0.0", "service.listen.host", "The address the service listens on")
 	Config().RegisterOptionalParameter("LISTEN_PORT", "8080", "service.listen.port", "The port the service listens on")
 	Config().Parse()
 }
 
+// deprecated, use NewWithOptions instead
 // New returns a new Service object
 func New(name string) *Service {
 
@@ -124,6 +121,34 @@ func New(name string) *Service {
 		ServeMux:   http.NewServeMux(),
 	}
 	s.prepareBeforeStart()
+	return s
+}
+
+// NewWithOptions creates new service with a provided options
+// it used default options as well (maybe we want to have a different constructor for this?)
+func NewWithOptions(name string, options ...OptionFunc) *Service {
+	s := &Service{}
+	// default options
+	// prepend default ones
+	serviceOptions := append(
+		[]OptionFunc{
+			// default options
+			NameOption(name),
+			ComponentHostOption(),
+			ComponentPortOption(),
+			PrometheusOption(name),
+			RouterOption(mux.NewRouter()),
+			ServerMuxOption(http.NewServeMux()),
+		},
+		options...)
+
+	// apply service options
+	for _, o := range serviceOptions {
+		if err := o(s); err != nil {
+			log.Panicf("cannot create new service: %v", err)
+		}
+	}
+
 	return s
 }
 

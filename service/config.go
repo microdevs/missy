@@ -10,6 +10,7 @@ import (
 var config *Configuration
 var once sync.Once
 
+// deprecated
 // Config returns the singleton  instance of the service configuration
 // We explicitly don't want to do this on the first call of Config() to avoid race conditions,
 // because other parts of the application register parameters in their init functions.
