@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -65,6 +66,13 @@ type Service struct {
 	Router     *mux.Router
 	Stop       chan os.Signal
 	ServeMux   *http.ServeMux
+
+	StateProbes struct {
+		IsHealthy bool
+		MuHealthy sync.Mutex
+		IsReady   bool
+		MuReady   sync.Mutex
+	}
 }
 
 var listenPort = "8080"
@@ -123,7 +131,11 @@ func New(name string) *Service {
 		Router:     mux.NewRouter(),
 		ServeMux:   http.NewServeMux(),
 	}
+
+	s.StateProbes.IsHealthy = true
+	s.StateProbes.IsReady = true
 	s.prepareBeforeStart()
+	s.Stop = make(chan os.Signal, 1)
 	return s
 }
 
@@ -150,14 +162,13 @@ func (s *Service) Start() {
 		}
 		log.Debugf("server shut down")
 	}()
-
 	s.prepareShutdown(h)
 }
 
 func (s *Service) prepareShutdown(h Server) {
-	s.Stop = make(chan os.Signal, 1)
 	signal.Notify(s.Stop, os.Interrupt, syscall.SIGTERM)
 	<-s.Stop
+	s.StatusNotReady()
 	shutdown(h)
 }
 
@@ -230,6 +241,7 @@ func (s *Service) prepareBeforeStart() {
 	s.timer = NewTimer()
 	s.Router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 	s.Router.HandleFunc("/health", s.healthHandler).Methods("GET")
+	s.Router.HandleFunc("/ready", s.readinessHandler).Methods("GET")
 	s.Router.HandleFunc("/info", s.infoHandler).Methods("GET")
 
 	s.ServeMux.Handle("/", s.Router)
@@ -369,4 +381,32 @@ func prepareTLS() (certFile string, keyFile string, useTLS bool) {
 	}
 
 	return certFile, keyFile, true
+}
+
+func (s *Service) StatusUnhealthy() {
+	s.statusHealthy(false)
+}
+
+func (s *Service) StatusHealthy() {
+	s.statusHealthy(true)
+}
+
+func (s *Service) statusHealthy(v bool) {
+	s.StateProbes.MuHealthy.Lock()
+	defer s.StateProbes.MuHealthy.Unlock()
+	s.StateProbes.IsHealthy = v
+}
+
+func (s *Service) StatusNotReady() {
+	s.statusReady(false)
+}
+
+func (s *Service) StatusReady() {
+	s.statusReady(true)
+}
+
+func (s *Service) statusReady(v bool) {
+	s.StateProbes.MuReady.Lock()
+	defer s.StateProbes.MuReady.Unlock()
+	s.StateProbes.IsReady = v
 }

@@ -111,5 +111,28 @@ func (s *Service) infoHandler(w http.ResponseWriter, r *http.Request) {
 
 // healthHandler
 func (s *Service) healthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("OK"))
+	s.StateProbes.MuHealthy.Lock()
+	defer s.StateProbes.MuHealthy.Unlock()
+
+	if s.StateProbes.IsHealthy {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+		return
+	}
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte("Not OK"))
+}
+
+// readinessHandler
+func (s *Service) readinessHandler(w http.ResponseWriter, r *http.Request) {
+	s.StateProbes.MuReady.Lock()
+	defer s.StateProbes.MuReady.Unlock()
+
+	if s.StateProbes.IsReady {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Ready"))
+		return
+	}
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte("Not Ready"))
 }
