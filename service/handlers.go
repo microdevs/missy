@@ -3,13 +3,11 @@ package service
 import (
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strings"
-
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
 	"github.com/microdevs/missy/log"
+	"io/ioutil"
+	"net/http"
 )
 
 var pubkey *rsa.PublicKey
@@ -62,17 +60,12 @@ func AuthHandler(h http.Handler) http.Handler {
 			return
 		}
 
-		reqToken := r.Header.Get("Authorization")
-		splitToken := strings.Split(reqToken, "Bearer ")
-
-		// check if there is a Bearer token (token will be at index 1)
-		if len(splitToken) < 2 {
+		// get request bearer token
+		reqToken, err := RawToken(r)
+		if err != nil {
 			http.Error(w, "No Authorization Bearer token found", http.StatusBadRequest)
 			return
 		}
-
-		// get request bearer token
-		reqToken = splitToken[1]
 		token, err := jwt.Parse(reqToken, func(t *jwt.Token) (interface{}, error) {
 			return pubkey, nil
 		})

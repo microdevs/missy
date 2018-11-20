@@ -119,3 +119,21 @@ func TestTokenClaims(t *testing.T) {
 		}
 	}
 }
+
+func TestRawToken(t *testing.T) {
+
+	r := httptest.NewRequest(http.MethodGet, "/test", nil)
+	r.Header.Add("Authorization", "Bearer token")
+
+	token, err := RawToken(r)
+	if err != nil {
+		t.Log("error occoured calling raw token: ", err)
+		t.Fail()
+	}
+
+	if token != "token" {
+		t.Logf("token was \"%s\" expected \"%s\"", token, "token")
+		t.Fail()
+	}
+
+}

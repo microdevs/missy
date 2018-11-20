@@ -1,8 +1,10 @@
 package service
 
 import (
+	"errors"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/microdevs/missy/log"
 
@@ -17,7 +19,7 @@ func Vars(r *http.Request) map[string]string {
 }
 
 // token returns the validated auth token from the request context
-func token(r *http.Request) *jwt.Token {
+func Token(r *http.Request) *jwt.Token {
 	t := context.Get(r, "token")
 	if t == (*jwt.Token)(nil) {
 		return nil
@@ -25,9 +27,21 @@ func token(r *http.Request) *jwt.Token {
 	return t.(*jwt.Token)
 }
 
+func RawToken(r *http.Request) (string, error) {
+	reqToken := r.Header.Get("Authorization")
+	splitToken := strings.Split(reqToken, "Bearer ")
+
+	// check if there is a Bearer token (token will be at index 1)
+	if len(splitToken) < 2 {
+		return "", errors.New("error getting raw token: malformed authorization header")
+	}
+
+	return splitToken[1], nil
+}
+
 // TokenHasAccess checks if a valid access token contains a given policy in a context
 func TokenHasAccess(r *http.Request, policy string) bool {
-	token := token(r)
+	token := Token(r)
 	// return false if there is no token
 	if token == nil {
 		return false
@@ -81,7 +95,7 @@ func TokenHasAccess(r *http.Request, policy string) bool {
 
 // IsRequestTokenValid checks if request has a valid token
 func IsRequestTokenValid(r *http.Request) bool {
-	token := token(r)
+	token := Token(r)
 	// return false if there is no token
 	if token == nil {
 		return false
@@ -112,7 +126,7 @@ func IsSignedTokenValid(signedToken string) bool {
 
 // TokenClaims get token claims
 func TokenClaims(r *http.Request) map[string]interface{} {
-	token := token(r)
+	token := Token(r)
 	// return false if there is no token
 	if token == nil {
 		return nil
