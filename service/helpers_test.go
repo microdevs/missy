@@ -1,13 +1,14 @@
 package service
 
 import (
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/context"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/context"
 )
 
 func TestVars(t *testing.T) {
@@ -19,31 +20,29 @@ func TestVars(t *testing.T) {
 	}
 }
 
-var tokenHasAccessTestCases = []struct {
-	Token          *jwt.Token
-	Context        string
-	Policy         string
-	ExpectedResult bool
-}{
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy1", true},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy2", true},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "other", "policy1", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy4", false},
-	{&jwt.Token{Claims: jwt.StandardClaims{}}, "default", "policy1", false},
-	{nil, "default", "policy1", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": "not a map"}}, "default", "policy1", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"1", "2", "3"}}}}, "default", "policy1", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{1, true, 0.283, "foo"}}}}, "default", "policy1", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{1, true, 0.283, "foo"}}}}, "", "policy1", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{}}}, "", "", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "", true},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "policy", false},
-	{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{"policy"}}}}, "ctx", "policy", true},
-}
-
 func TestTokenHasAccess(t *testing.T) {
-	// loop through the test cases specified above
-	for _, test := range tokenHasAccessTestCases {
+	tests := []struct {
+		Token          *jwt.Token
+		Context        string
+		Policy         string
+		ExpectedResult bool
+	}{
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy1", true},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy2", true},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "other", "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy4", false},
+		{&jwt.Token{Claims: jwt.StandardClaims{}}, "default", "policy1", false},
+		{nil, "default", "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": "not a map"}}, "default", "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"1", "2", "3"}}}}, "default", "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{1, true, 0.283, "foo"}}}}, "default", "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{1, true, 0.283, "foo"}}}}, "", "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{}}}, "", "", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "", true},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "policy", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{"policy"}}}}, "ctx", "policy", true},
+	}
+	for _, test := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/foo", strings.NewReader("foobar"))
 		r.Header.Set("context", test.Context)
 		context.Set(r, "token", test.Token)
@@ -55,18 +54,23 @@ func TestTokenHasAccess(t *testing.T) {
 	}
 }
 
-var isReqTokenValidCases = []struct {
-	token  *jwt.Token
-	result bool
-}{
-	{&jwt.Token{Valid: false}, false},
-	{&jwt.Token{Valid: true}, true},
-	{&jwt.Token{}, false},
-	{nil, false},
+func TestTokenShouldNotPanicOnEmptyToken(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/foo", http.NoBody)
+	// don't set a token
+	IsRequestTokenValid(r) // check if this function won't panic
 }
 
 func TestIsRequestTokenValid(t *testing.T) {
-	for _, test := range isReqTokenValidCases {
+	tests := []struct {
+		token  *jwt.Token
+		result bool
+	}{
+		{&jwt.Token{Valid: false}, false},
+		{&jwt.Token{Valid: true}, true},
+		{&jwt.Token{}, false},
+		{nil, false},
+	}
+	for _, test := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/foo", http.NoBody)
 		context.Set(r, "token", test.token)
 		result := IsRequestTokenValid(r)
@@ -94,20 +98,19 @@ func TestIsSignedTokenNotValid(t *testing.T) {
 
 }
 
-var tokenClaimsTestCases = []struct {
-	Token *jwt.Token
-	Claim map[string]interface{}
-}{
-	{&jwt.Token{Claims: jwt.MapClaims{}}, map[string]interface{}{}},
-	{&jwt.Token{}, nil},
-	{&jwt.Token{Claims: jwt.MapClaims{"test": "test"}}, map[string]interface{}{"test": "test"}},
-	{&jwt.Token{Claims: jwt.MapClaims{"test": map[string]string{"t2": "v2"}}}, map[string]interface{}{"test": map[string]string{"t2": "v2"}}},
-	{nil, nil},
-}
-
 func TestTokenClaims(t *testing.T) {
+	tests := []struct {
+		Token *jwt.Token
+		Claim map[string]interface{}
+	}{
+		{&jwt.Token{Claims: jwt.MapClaims{}}, map[string]interface{}{}},
+		{&jwt.Token{}, nil},
+		{&jwt.Token{Claims: jwt.MapClaims{"test": "test"}}, map[string]interface{}{"test": "test"}},
+		{&jwt.Token{Claims: jwt.MapClaims{"test": map[string]string{"t2": "v2"}}}, map[string]interface{}{"test": map[string]string{"t2": "v2"}}},
+		{nil, nil},
+	}
 	// loop through the test cases specified above
-	for _, test := range tokenClaimsTestCases {
+	for _, test := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/foo", strings.NewReader("foobar"))
 		context.Set(r, "token", test.Token)
 		result := TokenClaims(r)

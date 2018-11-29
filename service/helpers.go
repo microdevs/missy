@@ -18,13 +18,13 @@ func Vars(r *http.Request) map[string]string {
 	return mux.Vars(r)
 }
 
-// token returns the validated auth token from the request context
+// Token returns the validated auth token from the request context
 func Token(r *http.Request) *jwt.Token {
-	t := context.Get(r, "token")
-	if t == (*jwt.Token)(nil) {
-		return nil
+	ti := context.Get(r, "token")
+	if ti, ok := ti.(*jwt.Token); ok {
+		return ti
 	}
-	return t.(*jwt.Token)
+	return nil
 }
 
 func RawToken(r *http.Request) (string, error) {
