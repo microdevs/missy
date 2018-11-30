@@ -14,16 +14,15 @@ import (
 
 func TestNewWriter(t *testing.T) {
 	r := NewWriter([]string{"localhost:9091"}, "test")
-
 	writerType := reflect.TypeOf((*Writer)(nil)).Elem()
-
 	if !reflect.TypeOf(r).Implements(writerType) {
 		t.Error("messaging.NewWriter does not implement messaging.Writer interface")
 	}
-
 }
 
 func TestMissyWriter_WriteSuccess(t *testing.T) {
+	ctx := context.Background()
+
 	mockCtrl := gomock.NewController(t)
 	brokerWriterMock := NewMockBrokerWriter(mockCtrl)
 
@@ -58,7 +57,7 @@ func TestMissyWriter_WriteSuccess(t *testing.T) {
 
 	defer monkey.Unpatch(brokerWriterMock.WriteMessages)
 
-	if err := writer.Write(key, value); err != nil {
+	if err := writer.Write(ctx, key, value); err != nil {
 		t.Error("there was an unexpected error during Write message")
 	}
 
@@ -71,6 +70,7 @@ func TestMissyWriter_WriteSuccess(t *testing.T) {
 }
 
 func TestMissyWriter_WriteError(t *testing.T) {
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	brokerWriterMock := NewMockBrokerWriter(mockCtrl)
 
@@ -91,7 +91,7 @@ func TestMissyWriter_WriteError(t *testing.T) {
 	key := []byte("key")
 	value := []byte("value")
 
-	if err := writer.Write(key, value); err == nil {
+	if err := writer.Write(ctx, key, value); err == nil {
 		t.Error("error was expected")
 	}
 

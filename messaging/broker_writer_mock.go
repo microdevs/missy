@@ -35,7 +35,7 @@ func (m *MockWriter) EXPECT() *MockWriterMockRecorder {
 }
 
 // Write mocks base method
-func (m *MockWriter) Write(key, value []byte) error {
+func (m *MockWriter) Write(ctx context.Context, key, value []byte) error {
 	ret := m.ctrl.Call(m, "Write", key, value)
 	ret0, _ := ret[0].(error)
 	return ret0

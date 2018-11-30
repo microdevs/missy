@@ -3,9 +3,10 @@ package messaging
 import (
 	"context"
 	"fmt"
-	"github.com/microdevs/missy/service"
 	"testing"
 	"time"
+
+	"github.com/microdevs/missy/service"
 
 	"reflect"
 
@@ -21,15 +22,11 @@ func expected(expected string, value string) string {
 
 func TestNewReader(t *testing.T) {
 	monkeyPatchConfig()
-
-	r := NewReader([]string{"localhost:9091"}, "", "test")
-
+	r, _ := NewReader([]string{"localhost:9091"}, "", "test", nil)
 	readerType := reflect.TypeOf((*Reader)(nil)).Elem()
-
 	if !reflect.TypeOf(r).Implements(readerType) {
 		t.Error("messaging.NewReader does not implement messaging.Reader interface")
 	}
-
 }
 
 func TestReader_ReadSuccess(t *testing.T) {
@@ -61,20 +58,15 @@ func TestReader_ReadSuccess(t *testing.T) {
 		return nil
 	}
 
-	err := reader.Read(readFunc)
-
+	err := reader.StartReading(context.Background(), readFunc)
 	if err != nil {
 		t.Errorf("error during read function unexpected!")
 	}
 
-	err = reader.Read(readFunc)
-
+	err = reader.StartReading(context.Background(), readFunc)
 	if err == nil {
-		t.Errorf("error during read function expected, bacause readFunc is set!")
+		t.Errorf("error during read function expected, because readFunc is set!")
 	}
-
-	// todo how to test internal goroutines loops better?
-	time.Sleep(time.Millisecond)
 }
 
 func TestReader_ReadErrorOnFetch(t *testing.T) {
@@ -90,8 +82,7 @@ func TestReader_ReadErrorOnFetch(t *testing.T) {
 		return nil
 	}
 
-	err := reader.Read(readFunc)
-
+	err := reader.StartReading(context.Background(), readFunc)
 	if err != nil {
 		t.Errorf("error during read function unexpected!")
 	}
@@ -128,8 +119,7 @@ func TestMissyReader_ReadErrorOnCommit(t *testing.T) {
 		return nil
 	}
 
-	err := reader.Read(readFunc)
-
+	err := reader.StartReading(context.Background(), readFunc)
 	if err != nil {
 		t.Errorf("error during read function unexpected!")
 	}
@@ -155,12 +145,10 @@ func TestMissyReader_ReadErrorOnReadFuncShouldWriteToDLQAndCommitMsg(t *testing.
 		return errors.New("error")
 	}
 
-	err := reader.Read(readFunc)
-
+	err := reader.StartReading(context.Background(), readFunc)
 	if err != nil {
 		t.Errorf("error during read function unexpected!")
 	}
-
 	// todo how to test internal goroutines loops better?
 	time.Sleep(time.Millisecond)
 }
@@ -169,15 +157,11 @@ func TestMissyReader_Close(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	brokerReaderMock := NewMockBrokerReader(mockCtrl)
 	brokerReaderMock.EXPECT().Close().Return(nil)
-
 	reader := missyReader{brokerReader: brokerReaderMock}
-
 	err := reader.Close()
-
 	if err != nil {
 		t.Errorf("there is an error during Close call")
 	}
-
 }
 
 func TestReadBroker_FetchMessage(t *testing.T) {
@@ -195,25 +179,16 @@ func TestReadBroker_FetchMessage(t *testing.T) {
 		exec = true
 		return kafka.Message{Topic: "test", Key: []byte("key"), Value: []byte("value"), Partition: 0, Offset: 0}, nil
 	})
-
 	defer monkey.Unpatch(kr.FetchMessage)
 
 	rb := readBroker{kr}
-
 	msg, err := rb.FetchMessage(context.Background())
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
-	if err != nil {
-		t.Error("there is an unexpected error during FetchMessage call")
-	}
-
 	if err != nil {
 		t.Error("there is an error during ReadMessage call")
 	}
-
 	if msg.Topic != "test" {
 		t.Error(expected(msg.Topic, "test"))
 	}
@@ -229,7 +204,6 @@ func TestReadBroker_FetchMessage(t *testing.T) {
 	if msg.Offset != 0 {
 		t.Error(expected(string(msg.Offset), string(0)))
 	}
-
 }
 
 func monkeyPatchConfig() {
@@ -253,17 +227,13 @@ func TestReadBroker_FetchMessage_Error(t *testing.T) {
 		exec = true
 		return kafka.Message{}, errors.New("fetch error")
 	})
-
 	defer monkey.Unpatch(kr.FetchMessage)
 
 	rb := readBroker{kr}
-
 	_, err := rb.FetchMessage(context.Background())
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
 	if err == nil {
 		t.Error("there should be an error during FetchMessage call")
 	}
@@ -284,21 +254,16 @@ func TestReadBroker_ReadMessage(t *testing.T) {
 		exec = true
 		return kafka.Message{Topic: "test", Key: []byte("key"), Value: []byte("value"), Partition: 0, Offset: 0}, nil
 	})
-
 	defer monkey.Unpatch(kr.ReadMessage)
 
 	rb := readBroker{kr}
-
 	msg, err := rb.ReadMessage(context.Background())
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
 	if err != nil {
 		t.Error("there is an error during ReadMessage call")
 	}
-
 	if msg.Topic != "test" {
 		t.Error(expected(msg.Topic, "test"))
 	}
@@ -318,7 +283,6 @@ func TestReadBroker_ReadMessage(t *testing.T) {
 
 func TestReadBroker_ReadMessage_Error(t *testing.T) {
 	monkeyPatchConfig()
-
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
 		GroupID: "gr1",
@@ -331,17 +295,13 @@ func TestReadBroker_ReadMessage_Error(t *testing.T) {
 		exec = true
 		return kafka.Message{}, errors.New("read error")
 	})
-
 	defer monkey.Unpatch(kr.ReadMessage)
 
 	rb := readBroker{kr}
-
 	_, err := rb.ReadMessage(context.Background())
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
 	if err == nil {
 		t.Error("there should be an error during ReadMessage call")
 	}
@@ -349,7 +309,6 @@ func TestReadBroker_ReadMessage_Error(t *testing.T) {
 
 func TestReadBroker_CommitMessages(t *testing.T) {
 	monkeyPatchConfig()
-
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
 		GroupID: "gr1",
@@ -368,26 +327,20 @@ func TestReadBroker_CommitMessages(t *testing.T) {
 		exec = true
 		return nil
 	})
-
 	defer monkey.Unpatch(kr.CommitMessages)
 
 	rb := readBroker{kr}
-
 	err := rb.CommitMessages(context.Background(), messages...)
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
 	if err != nil {
 		t.Error("error was not expected in CommitMessage call")
 	}
-
 }
 
 func TestReadBroker_CommitMessages_Error(t *testing.T) {
 	monkeyPatchConfig()
-
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
 		GroupID: "gr1",
@@ -396,7 +349,6 @@ func TestReadBroker_CommitMessages_Error(t *testing.T) {
 
 	messages := make([]Message, 1)
 	messages[0] = Message{}
-
 	exec := false
 	// using monkey patching to patch underlying function call (https://github.com/bouk/monkey)
 	monkey.PatchInstanceMethod(reflect.TypeOf(kr), "CommitMessages", func(_ *kafka.Reader, ctx context.Context, msgs ...kafka.Message) error {
@@ -406,53 +358,42 @@ func TestReadBroker_CommitMessages_Error(t *testing.T) {
 		exec = true
 		return errors.New("commit error")
 	})
-
 	defer monkey.Unpatch(kr.CommitMessages)
 
 	rb := readBroker{kr}
-
 	err := rb.CommitMessages(context.Background(), messages...)
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
 	if err == nil {
 		t.Error("error was expected in CommitMessage call")
 	}
-
 }
 
 func TestReadBroker_Close(t *testing.T) {
 	monkeyPatchConfig()
-
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{"localhost:9999"},
 		GroupID: "gr1",
 		Topic:   "test",
 	})
 
-	exec := false
 	// using monkey patching to patch underlying function call (https://github.com/bouk/monkey)
+	exec := false
 	monkey.PatchInstanceMethod(reflect.TypeOf(kr), "Close", func(_ *kafka.Reader) error {
 		exec = true
 		return nil
 	})
-
 	defer monkey.Unpatch(kr.Close)
 
 	rb := readBroker{kr}
-
 	err := rb.Close()
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
 	if err != nil {
 		t.Error("error was not expected in Close call")
 	}
-
 }
 
 func TestReadBroker_Close_Error(t *testing.T) {
@@ -476,19 +417,15 @@ func TestReadBroker_Close_Error(t *testing.T) {
 	rb := readBroker{kr}
 
 	err := rb.Close()
-
 	if !exec {
 		t.Error("function patching was not called!")
 	}
-
 	if err == nil {
 		t.Error("there should be error in Close call")
 	}
-
 }
 
 func TestReadBroker_FailingMessageShouldBeSendToDLQ(t *testing.T) {
-
 	mockCtrl := gomock.NewController(t)
 	brokerReaderMock := NewMockBrokerReader(mockCtrl)
 	dlqWriterMock := NewMockWriter(mockCtrl)
@@ -505,7 +442,10 @@ func TestReadBroker_FailingMessageShouldBeSendToDLQ(t *testing.T) {
 	//main check, we just want to know that dlqWriterMock was called
 	dlqWriterMock.EXPECT().Write(key, value).Return(nil)
 
-	reader.Read(readFunc)
+	err := reader.StartReading(context.Background(), readFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	time.Sleep(3 * time.Second)
 	mockCtrl.Finish()
