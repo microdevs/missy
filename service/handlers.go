@@ -3,11 +3,12 @@ package service
 import (
 	"crypto/rsa"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
 	"github.com/microdevs/missy/log"
-	"io/ioutil"
-	"net/http"
 )
 
 var pubkey *rsa.PublicKey
@@ -83,21 +84,23 @@ func AuthHandler(h http.Handler) http.Handler {
 
 // FinalHandler measures the time of the request with the help of the timestamp taken in StartTimerHandler
 // and writes it to a Prometheus metric. It will also write a log line of the request in the log file
-func FinalHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mw := &ResponseWriter{ResponseWriter: w}
-		// if Hijacker interface is implemented switch to our HijackedResponseWriter
-		if _, ok := w.(http.Hijacker); ok {
-			w = &HijackerResponseWriter{mw}
-		} else {
-			w = mw
-		}
-		h.ServeHTTP(w, r)
-		log.Infof("%s \"%s %s %s %d\" - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, mw.Status(), r.UserAgent())
-		timer := context.Get(r, RequestTimer).(*Timer)
-		prometheus := context.Get(r, PrometheusInstance).(*PrometheusHolder)
-		prometheus.OnRequestFinished(r.Method, r.URL.Path, mw.Status(), timer.durationMillis())
-	})
+func FinalHandler(pattern string) func(h http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mw := &ResponseWriter{ResponseWriter: w}
+			// if Hijacker interface is implemented switch to our HijackedResponseWriter
+			if _, ok := w.(http.Hijacker); ok {
+				w = &HijackerResponseWriter{mw}
+			} else {
+				w = mw
+			}
+			h.ServeHTTP(w, r)
+			log.Infof("%s \"%s %s %s %d\" - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, mw.Status(), r.UserAgent())
+			timer := context.Get(r, RequestTimer).(*Timer)
+			prometheus := context.Get(r, PrometheusInstance).(*PrometheusHolder)
+			prometheus.OnRequestFinished(r.Method, pattern, mw.Status(), timer.durationMillis())
+		})
+	}
 }
 
 // infoHandler

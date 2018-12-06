@@ -255,26 +255,26 @@ func (s *Service) SecureHandleFunc(pattern string, handler func(http.ResponseWri
 // Handle is a wrapper around the original Go handle func with logging recovery and metrics
 // Deprecated: Developers should use SecureHandle() or UnsafeHandle() explicitly
 func (s *Service) Handle(pattern string, originalHandler http.Handler) *mux.Route {
-	h := s.makeHandler(originalHandler, false)
+	h := s.makeHandler(originalHandler, pattern, false)
 	return s.Router.Handle(pattern, h)
 }
 
 // UnsafeHandle is a wrapper around the original Go handle func with logging recovery and metrics
 func (s *Service) UnsafeHandle(pattern string, originalHandler http.Handler) *mux.Route {
-	h := s.makeHandler(originalHandler, false)
+	h := s.makeHandler(originalHandler, pattern, false)
 	return s.Router.Handle(pattern, h)
 }
 
 // SecureHandle is a wrapper around the original Go handle func with logging recovery and metrics
 func (s *Service) SecureHandle(pattern string, originalHandler http.Handler) *mux.Route {
 	initPublicKey()
-	h := s.makeHandler(originalHandler, true)
+	h := s.makeHandler(originalHandler, pattern, true)
 	return s.Router.Handle(pattern, h)
 }
 
 // Makes a handler that wraps Missy specific functionality and returns either a secure or insecure chain
 // a secure chain includes the auth handler
-func (s *Service) makeHandler(originalHandler http.Handler, secure bool) http.Handler {
+func (s *Service) makeHandler(originalHandler http.Handler, pattern string, secure bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -288,9 +288,9 @@ func (s *Service) makeHandler(originalHandler http.Handler, secure bool) http.Ha
 		gctx.Set(r, PrometheusInstance, s.Prometheus)
 		gctx.Set(r, RouterInstance, s.Router)
 		// call custom handler
-		chain := NewChain(StartTimerHandler).Final(FinalHandler).Then(originalHandler)
+		chain := NewChain(StartTimerHandler).Final(FinalHandler(pattern)).Then(originalHandler)
 		if secure {
-			chain = NewChain(StartTimerHandler, AuthHandler).Final(FinalHandler).Then(originalHandler)
+			chain = NewChain(StartTimerHandler, AuthHandler).Final(FinalHandler(pattern)).Then(originalHandler)
 		}
 		chain.ServeHTTP(w, r)
 	})
