@@ -40,7 +40,7 @@ import (
 )
 
 func main() {
-	s := service.New()
+	s := service.New("hello")
 	s.HandleFunc("/hello/{name}", HelloHandler).Methods("GET")
 	s.HandleFunc("/json", JsonHandler).Methods("GET")
 	s.Start()
