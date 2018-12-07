@@ -114,13 +114,13 @@ func (s *Service) healthHandler(w http.ResponseWriter, r *http.Request) {
 	s.StateProbes.MuHealthy.Lock()
 	defer s.StateProbes.MuHealthy.Unlock()
 
-	if s.StateProbes.IsHealthy {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+	if !s.StateProbes.IsHealthy {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Not OK"))
 		return
 	}
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte("Not OK"))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
 
 // readinessHandler
@@ -128,11 +128,12 @@ func (s *Service) readinessHandler(w http.ResponseWriter, r *http.Request) {
 	s.StateProbes.MuReady.Lock()
 	defer s.StateProbes.MuReady.Unlock()
 
-	if s.StateProbes.IsReady {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Ready"))
+	if !s.StateProbes.IsReady {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Not Ready"))
 		return
 	}
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte("Not Ready"))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Ready"))
+
 }
