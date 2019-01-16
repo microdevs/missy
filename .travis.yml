@@ -1,14 +1,17 @@
 language: go
-
-before_install:
-  - make ensure_dep
-  - make ensure_coverall
+go:
+  - "1.11.x"
+group: travis_lts
+env:
+- GO111MODULE=on # this is because travis go uses GOPATH for project and 1.11.x with vgo need this to build
 
 before_script:
-  - make check_gofmt
+  - go get golang.org/x/tools/cmd/goimports
 
 script:
-  - make tests_with_cover
+  - make lint
+  - make build
+#  - make test # TODO use test_goveralls
   - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then make goveralls; fi'
 
 notifications:
