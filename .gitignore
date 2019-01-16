@@ -10,9 +10,6 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
-.glide/
-
 # IntelliJ
 .idea
 *iml
@@ -22,3 +19,6 @@ vendor/
 
 # tests covers files
 *.coverprofile
+
+# root go mod because each package is it's own module
+go.mod
