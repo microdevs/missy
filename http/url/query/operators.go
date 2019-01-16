@@ -4,8 +4,8 @@ package query
 const (
 	// sorting
 	Default = ""     // default operator
-	ASC     = "asc"  // ascending order
-	DESC    = "desc" // descending order
+	Asc     = "asc"  // ascending order
+	Desc    = "desc" // descending order
 	In      = "in"   // in
 	NIn     = "nin"  // not in
 	Eq      = "eq"   // equal
