@@ -11,7 +11,7 @@ import (
 )
 
 type Config struct {
-	CAFile  string        `env:"HTTP_CLIENT_CAFILE"`
+	CAFile  string        `env:"HTTP_CLIENT_CA_FILE"`
 	Timeout time.Duration `env:"HTTP_CLIENT_TIMEOUT" envDefault:"600s"`
 }
 

@@ -33,7 +33,7 @@ func newMetric(c Config, l log.FieldsLogger) *metric {
 	}
 	s.router.Get("/health", s.health.HandleGet)
 	s.router.Get("/ready", s.readiness.HandleGet)
-	if c.Metrics {
+	if c.Metric {
 		s.router.Mount("/metrics", promhttp.Handler())
 	}
 	return s
