@@ -19,11 +19,12 @@ type Router chi.Router
 
 // Server defines the http server
 type Server interface {
+	// TODO we should split listen and serve and notify about listen by chan
 	ListenAndServe(context.Context, context.CancelFunc)
 }
 
 type Servers struct {
-	internal *serverInternal
+	metric   *metric
 	external *server
 
 	tlsCertFile string
@@ -34,8 +35,9 @@ type Servers struct {
 }
 
 type Config struct {
-	Listen         string `env:"HTTP_SERVER_LISTEN" envDefault:"localhost:8080"`
-	InternalListen string `env:"HTTP_SERVER_INTERNAL_LISTEN" envDefault:"localhost:5000"`
+	Name         string `env:"HTTP_SERVER_NAME" envDefault:"missy"`
+	Listen       string `env:"HTTP_SERVER_LISTEN" envDefault:"localhost:8080"`
+	MetricListen string `env:"HTTP_SERVER_METRIC_LISTEN" envDefault:"localhost:5000"`
 
 	TLSCertFile string `env:"HTTP_SERVER_CERTFILE"`
 	TLSKeyFile  string `env:"HTTP_SERVER_KEYFILE"`
@@ -44,20 +46,14 @@ type Config struct {
 	Shutdown time.Duration `env:"HTTP_SERVER_SHUTDOWN_TIMEOUT" envDefault:"30s"`
 }
 
-// New returns a new HTTP server object.
-func New(name string, c Config, l log.FieldsLogger) *Servers {
+// New returns new Servers component.
+func New(c Config, l log.FieldsLogger) *Servers {
 	s := &Servers{
-		internal: newServerInternal(c, l.WithField("http", []string{"server", "internal"})),
+		metric:   newMetric(c, l.WithField("http", []string{"server", "metric"})),
 		external: newServer(c, l.WithField("http", []string{"server", "external"})),
 		shutdown: c.Shutdown,
 		l:        l,
 	}
-	go func() {
-		err := s.internal.ListenAndServe()
-		if err != http.ErrServerClosed {
-			l.Fatalf("internal server listen and serve err: %s", err)
-		}
-	}()
 	return s
 }
 
@@ -65,8 +61,18 @@ func (s *Servers) ListenAndServe(ctx context.Context, cancel context.CancelFunc)
 	signals := make(chan os.Signal)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
-	s.SetReadiness(true)
+	// metric server
 	go func() {
+		err := s.metric.ListenAndServe()
+		if err != http.ErrServerClosed {
+			s.l.Fatalf("metric server listen and serve err: %s", err)
+		}
+	}()
+
+	// external server
+	go func() {
+		// We should set this after external is actually listening
+		s.SetReadiness(true)
 		err := s.external.ListenAndServe()
 		if err != http.ErrServerClosed {
 			s.l.Errorf("external server listen/serve err: %s", err)
@@ -82,7 +88,7 @@ func (s *Servers) ListenAndServe(ctx context.Context, cancel context.CancelFunc)
 	sthCtx, sthCancel := context.WithTimeout(context.Background(), s.shutdown)
 	defer sthCancel()
 	s.external.Shutdown(sthCtx)
-	s.internal.Shutdown(sthCtx)
+	s.metric.Shutdown(sthCtx)
 }
 
 // RoutesRaw method allows to define routes without any standard builtin middlewares.
@@ -103,9 +109,9 @@ func (s *Servers) Routes(f func(Router) error) error {
 }
 
 func (s *Servers) SetHealth(health bool) {
-	s.internal.SetHealth(health)
+	s.metric.SetHealth(health)
 }
 
 func (s *Servers) SetReadiness(ready bool) {
-	s.internal.SetReadiness(ready)
+	s.metric.SetReadiness(ready)
 }

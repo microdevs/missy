@@ -52,5 +52,5 @@ func (s *server) Shutdown(ctx context.Context) {
 	if err != nil {
 		s.l.Errorf("stopping server (shutdown) err: %s", err)
 	}
-	s.l.Infof("server stopped listenning at '%s'", s.server.Addr)
+	s.l.Infof("server stopped listening at '%s'", s.server.Addr)
 }
