@@ -35,14 +35,16 @@ type Servers struct {
 }
 
 type Config struct {
-	Name         string `env:"HTTP_SERVER_NAME" envDefault:"missy"`
-	Listen       string `env:"HTTP_SERVER_LISTEN" envDefault:"localhost:8080"`
+	Name string `env:"HTTP_SERVER_NAME" envDefault:"missy"`
+
+	Listen string `env:"HTTP_SERVER_LISTEN" envDefault:"localhost:8080"`
+
+	Metric       bool   `env:"HTTP_SERVER_METRIC_ENABLED" envDefault:"true"`
 	MetricListen string `env:"HTTP_SERVER_METRIC_LISTEN" envDefault:"localhost:5000"`
 
-	TLSCertFile string `env:"HTTP_SERVER_CERTFILE"`
-	TLSKeyFile  string `env:"HTTP_SERVER_KEYFILE"`
+	TLSCertFile string `env:"HTTP_SERVER_CERT_FILE"`
+	TLSKeyFile  string `env:"HTTP_SERVER_KEY_FILE"`
 
-	Metrics  bool          `env:"HTTP_SERVER_METRICS" envDefault:"true"`
 	Shutdown time.Duration `env:"HTTP_SERVER_SHUTDOWN_TIMEOUT" envDefault:"30s"`
 }
 

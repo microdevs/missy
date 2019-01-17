@@ -11,7 +11,7 @@ import (
 )
 
 type AuthConfig struct {
-	PublicKey []byte `env:"HTTP_SERVER_AUTHORIZATION_PUBLIC_KEY"`
+	PublicKey []byte `env:"HTTP_AUTH_PUBLIC_KEY"`
 }
 
 func (ac *AuthConfig) FromFile(filename string) error {
