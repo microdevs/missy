@@ -11,18 +11,19 @@ import (
 	"github.com/microdevs/missy/log"
 )
 
-type serverInternal struct {
+type metric struct {
 	server
 
 	health    *health.Handler
 	readiness *readiness.Handler
 }
 
-func newServerInternal(c Config, l log.FieldsLogger) *serverInternal {
-	s := &serverInternal{
+func newMetric(c Config, l log.FieldsLogger) *metric {
+	s := &metric{
+		// TODO what about TLS on metric external?
 		server: server{
 			server: &http.Server{
-				Addr: c.InternalListen,
+				Addr: c.MetricListen,
 			},
 			router: chi.NewRouter(),
 			l:      l,
@@ -38,10 +39,10 @@ func newServerInternal(c Config, l log.FieldsLogger) *serverInternal {
 	return s
 }
 
-func (si *serverInternal) SetHealth(health bool) {
-	si.health.Set(health)
+func (m *metric) SetHealth(health bool) {
+	m.health.Set(health)
 }
 
-func (si *serverInternal) SetReadiness(ready bool) {
-	si.readiness.Set(ready)
+func (m *metric) SetReadiness(ready bool) {
+	m.readiness.Set(ready)
 }

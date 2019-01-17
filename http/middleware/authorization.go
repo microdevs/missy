@@ -10,11 +10,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Config struct {
+type AuthConfig struct {
 	PublicKey []byte `env:"HTTP_SERVER_AUTHORIZATION_PUBLIC_KEY"`
 }
 
-func (ac *Config) FromFile(filename string) error {
+func (ac *AuthConfig) FromFile(filename string) error {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return errors.Errorf("reading certificate file err: %s", err)
@@ -23,7 +23,7 @@ func (ac *Config) FromFile(filename string) error {
 	return nil
 }
 
-func Authorization(c Config, l log.FieldsLogger) func(http.Handler) http.Handler {
+func Authorization(c AuthConfig, l log.FieldsLogger) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		if c.PublicKey == nil {
 			return h
