@@ -24,7 +24,7 @@ type Server interface {
 }
 
 type Servers struct {
-	metric   *metric
+	internal *internal
 	external *server
 
 	tlsCertFile string
@@ -37,10 +37,10 @@ type Servers struct {
 type Config struct {
 	Name string `env:"HTTP_SERVER_NAME" envDefault:"missy"`
 
-	Listen string `env:"HTTP_SERVER_LISTEN" envDefault:"localhost:8080"`
+	Listen         string `env:"HTTP_SERVER_LISTEN" envDefault:"localhost:8080"`
+	InternalListen string `env:"HTTP_SERVER_INTERNAL_LISTEN" envDefault:"localhost:5000"`
 
-	Metric       bool   `env:"HTTP_SERVER_METRIC_ENABLED" envDefault:"true"`
-	MetricListen string `env:"HTTP_SERVER_METRIC_LISTEN" envDefault:"localhost:5000"`
+	Metrics bool `env:"HTTP_SERVER_METRICS_ENABLED" envDefault:"true"`
 
 	TLSCertFile string `env:"HTTP_SERVER_CERT_FILE"`
 	TLSKeyFile  string `env:"HTTP_SERVER_KEY_FILE"`
@@ -51,8 +51,8 @@ type Config struct {
 // New returns new Servers component.
 func New(c Config, l log.FieldsLogger) *Servers {
 	s := &Servers{
-		metric:   newMetric(c, l.WithField("http", []string{"server", "metric"})),
-		external: newServer(c, l.WithField("http", []string{"server", "external"})),
+		internal: newInternal(c, l.WithField("http", []string{c.Name, "server", "internal"})),
+		external: newServer(c, l.WithField("http", []string{c.Name, "server", "external"})),
 		shutdown: c.Shutdown,
 		l:        l,
 	}
@@ -63,11 +63,11 @@ func (s *Servers) ListenAndServe(ctx context.Context, cancel context.CancelFunc)
 	signals := make(chan os.Signal)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
-	// metric server
+	// internal server
 	go func() {
-		err := s.metric.ListenAndServe()
+		err := s.internal.ListenAndServe()
 		if err != http.ErrServerClosed {
-			s.l.Fatalf("metric server listen and serve err: %s", err)
+			s.l.Fatalf("internal server listen and serve err: %s", err)
 		}
 	}()
 
@@ -90,7 +90,7 @@ func (s *Servers) ListenAndServe(ctx context.Context, cancel context.CancelFunc)
 	sthCtx, sthCancel := context.WithTimeout(context.Background(), s.shutdown)
 	defer sthCancel()
 	s.external.Shutdown(sthCtx)
-	s.metric.Shutdown(sthCtx)
+	s.internal.Shutdown(sthCtx)
 }
 
 // RoutesRaw method allows to define routes without any standard builtin middlewares.
@@ -111,9 +111,9 @@ func (s *Servers) Routes(f func(Router) error) error {
 }
 
 func (s *Servers) SetHealth(health bool) {
-	s.metric.SetHealth(health)
+	s.internal.SetHealth(health)
 }
 
 func (s *Servers) SetReadiness(ready bool) {
-	s.metric.SetReadiness(ready)
+	s.internal.SetReadiness(ready)
 }
