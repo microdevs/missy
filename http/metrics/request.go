@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -13,9 +14,9 @@ type HTTPRequestsCollector struct {
 }
 
 // NewHTTPRequestsCollector returns a new instance of a HTTPRequestsCollector.
-func NewHTTPRequestsCollector() *HTTPRequestsCollector {
+func NewHTTPRequestsCollector(name string) *HTTPRequestsCollector {
 	request := prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "http_handler_latency",
+		Name: strings.Replace(name, "-", "_", -1) + "_http_handler_latency",
 		Help: "HTTP Handler Latency by Endpoint",
 	},
 		[]string{"method", "path", "status_code"},

@@ -24,6 +24,8 @@ type Server interface {
 }
 
 type Servers struct {
+	name string
+
 	internal *internal
 	external *server
 
@@ -51,6 +53,7 @@ type Config struct {
 // New returns new Servers component.
 func New(c Config, l log.FieldsLogger) *Servers {
 	s := &Servers{
+		name:     c.Name,
 		internal: newInternal(c, l.WithField("http", []string{c.Name, "server", "internal"})),
 		external: newServer(c, l.WithField("http", []string{c.Name, "server", "external"})),
 		shutdown: c.Shutdown,
@@ -106,7 +109,7 @@ func (s *Servers) Routes(f func(Router) error) error {
 		r.Use(middleware.Tracing)
 		r.Use(middleware.Logger(s.l))
 		r.Use(middleware.Recoverer(s.l))
-		return f(RouterWithMetrics(r, metrics.NewHTTPRequestsCollector()))
+		return f(RouterWithMetrics(r, metrics.NewHTTPRequestsCollector(s.name)))
 	})
 }
 
