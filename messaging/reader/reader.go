@@ -82,7 +82,7 @@ func New(brokers []string, groupID string, topic string, options *Options, l log
 	// The library should never panic, like seriously. What's wrong with them.
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("creating new kafka reader err: %s", err)
+			err = fmt.Errorf("%s", r)
 		}
 	}()
 	kafkaReader := kafka.NewReader(kafka.ReaderConfig{
