@@ -151,11 +151,8 @@ func (mr *missyReader) StartReading(ctx context.Context, msgFunc MessageFunc) er
 					break
 				}
 
-				mr.l.Debugf("new message (part=%d,offset=%d): %s = %s",
-					m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
 				if err := mr.processMessage(msgFunc, m, 0); err != nil {
 					mr.l.Errorf("processing message err: %s", err)
-
 					if mr.dlqWriter != nil {
 						if err = mr.dlqWriter.Write(ctx, m.Key, m.Value); err != nil {
 							mr.l.Errorf("sending message to DLQ err: %v", err)
