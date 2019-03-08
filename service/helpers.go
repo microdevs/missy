@@ -9,8 +9,13 @@ import (
 	"github.com/microdevs/missy/log"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+)
+
+type ctxKey string
+
+const (
+	ctxToken ctxKey = "token"
 )
 
 // Vars returns the gorilla/mux values from a request
@@ -20,7 +25,7 @@ func Vars(r *http.Request) map[string]string {
 
 // Token returns the validated auth token from the request context
 func Token(r *http.Request) *jwt.Token {
-	ti := context.Get(r, "token")
+	ti := r.Context().Value(ctxToken)
 	if ti, ok := ti.(*jwt.Token); ok {
 		return ti
 	}
