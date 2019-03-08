@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -8,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/context"
 )
 
 func TestVars(t *testing.T) {
@@ -45,7 +45,9 @@ func TestTokenHasAccess(t *testing.T) {
 	for _, test := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/foo", strings.NewReader("foobar"))
 		r.Header.Set("context", test.Context)
-		context.Set(r, "token", test.Token)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxToken, test.Token)
+		r = r.WithContext(ctx)
 		result := TokenHasAccess(r, test.Policy)
 		if result != test.ExpectedResult {
 			t.Logf("Result should be %t but was %t", test.ExpectedResult, result)
@@ -72,7 +74,9 @@ func TestIsRequestTokenValid(t *testing.T) {
 	}
 	for _, test := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/foo", http.NoBody)
-		context.Set(r, "token", test.token)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxToken, test.token)
+		r = r.WithContext(ctx)
 		result := IsRequestTokenValid(r)
 		if result != test.result {
 			t.Errorf("Result should be %t but was %t", test.result, result)
@@ -112,7 +116,9 @@ func TestTokenClaims(t *testing.T) {
 	// loop through the test cases specified above
 	for _, test := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/foo", strings.NewReader("foobar"))
-		context.Set(r, "token", test.Token)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxToken, test.Token)
+		r = r.WithContext(ctx)
 		result := TokenClaims(r)
 		for i, c := range result {
 			if reflect.DeepEqual(c, test.Claim[i]) != true {

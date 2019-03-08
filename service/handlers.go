@@ -1,13 +1,13 @@
 package service
 
 import (
+	"context"
 	"crypto/rsa"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/context"
 	"github.com/microdevs/missy/log"
 )
 
@@ -46,7 +46,10 @@ func initPublicKey() {
 // StartTimerHandler is a middleware to start a timer for the request benchmark
 func StartTimerHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		context.Set(r, RequestTimer, NewTimer())
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, RequestTimer, NewTimer())
+		r = r.WithContext(ctx)
+
 		h.ServeHTTP(w, r)
 	})
 }
@@ -76,7 +79,9 @@ func AuthHandler(h http.Handler) http.Handler {
 			return
 		}
 
-		context.Set(r, "token", token)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ctxToken, token)
+		r = r.WithContext(ctx)
 
 		h.ServeHTTP(w, r)
 	})
@@ -94,10 +99,20 @@ func FinalHandler(pattern string) func(h http.Handler) http.Handler {
 			} else {
 				w = mw
 			}
+
 			h.ServeHTTP(w, r)
+
 			log.Infof("%s \"%s %s %s %d\" - %s", r.RemoteAddr, r.Method, r.URL, r.Proto, mw.Status(), r.UserAgent())
-			timer := context.Get(r, RequestTimer).(*Timer)
-			prometheus := context.Get(r, PrometheusInstance).(*PrometheusHolder)
+			timer, ok := r.Context().Value(RequestTimer).(*Timer)
+			if !ok {
+				log.Errorf("FinalHandler: couldn't get timer from request's context: val=%+#v", timer)
+				return
+			}
+			prometheus, ok := r.Context().Value(PrometheusInstance).(*PrometheusHolder)
+			if !ok {
+				log.Errorf("FinalHandler: couldn't get prometheus from request's context: val=%+#v", prometheus)
+				return
+			}
 			prometheus.OnRequestFinished(r.Method, pattern, mw.Status(), timer.durationMillis())
 		})
 	}

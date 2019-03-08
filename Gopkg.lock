@@ -51,11 +51,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0e71c2a8df69627a2adaa5ed2e1064df85fba840b3979af652985c7879dcd759"
+  digest = "1:1290ab3ac2dd3900a397dec83177b9e346b4a92ef8eb159e8ae2994bbcce7810"
   name = "github.com/gorilla/mux"
   packages = ["."]
   pruneopts = ""
-  revision = "8559a4f775fc329165fe32bd4c2543de8ada8fce"
+  revision = "15a353a636720571d19e37b34a14499c3afa9991"
 
 [[projects]]
   digest = "1:0f51cee70b0d254dbc93c22666ea2abf211af81c1701a96d04e2284b408621db"
@@ -83,7 +83,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:52b87b41a55b1c64a0c86c365425796c81fcc6f0601d9cae85dfe96886594b71"
+  digest = "1:5839f7266bea7c333c097721c508cf5bd6e1b60c9499bae12b94f2920f301ff1"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
@@ -91,7 +91,7 @@
     "prometheus/promhttp",
   ]
   pruneopts = ""
-  revision = "2daed26f633ce23fab5efc02fb3f2e803b3526c3"
+  revision = "c5e14697eaa7af985b2e326f1f5ed50bacb75c06"
 
 [[projects]]
   branch = "master"
@@ -115,7 +115,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:298812b66cd4cfd0b641df0bb9d5f93a02d6e2c23215db6f995b2160b9dc6999"
+  digest = "1:a29813277de981ce33148b3f1906bba492af2ce97237c050f62a6b48cfdae721"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
@@ -125,42 +125,42 @@
     "xfs",
   ]
   pruneopts = ""
-  revision = "6ed1f7e1041181781dd2826d3001075d011a80cc"
+  revision = "d0f344d83b0c80a1bc03b547a2374a9ec6711144"
 
 [[projects]]
   branch = "master"
-  digest = "1:e9716a979cd6eeff341a31cea4a282a54f6c4bf02f77106a7054fadcf7c84b41"
+  digest = "1:9a8f2c389df904f93a80eebbeb8c987a983cdfaa4fb49670f0953e9676e0ab34"
   name = "github.com/segmentio/kafka-go"
   packages = ["."]
   pruneopts = ""
-  revision = "855cd7db4ebae99464d59355fe1536f8b36d56bf"
+  revision = "d19f52f08673027cb346c63eb317b8e644b101af"
 
 [[projects]]
   branch = "master"
-  digest = "1:9d377971ba1bceee0bf11728d302ddc47b9e046e23d6fbb959408d7c39a3286a"
+  digest = "1:80692bf15dc7d6965274ceb4134847787e2cabc15c86740d879cbd0b69a1acc3"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = ""
-  revision = "cbce296565a149081ea0a76fd812f0e8f39032a3"
+  revision = "d7b6bf5e4d26448fd977d07d745a2a66097ddecb"
 
 [[projects]]
   branch = "master"
-  digest = "1:10f068b4b7d1a60a6d8a877c8f1d72b7e745cf1c32aaf9eaf11e2259938f0dfb"
+  digest = "1:7a77b79efe106f3304dcf50dc86836151758f246169b527722552a5eb2ae14fc"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = ""
-  revision = "7f87c0fbb88b590338857bcb720678c2583d4dea"
+  revision = "8dd112bcdc25174059e45e07517d9fc663123347"
 
 [[projects]]
   branch = "master"
-  digest = "1:0f39f8ca1c492b3b59020cb0f95e6635d5051bf7048a32ac5f9c6bf1adae6ec8"
+  digest = "1:b723a8ef66371461da4327c018f8b7a879fc59e525f6ac4b03a9f6411a7155ff"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = ""
-  revision = "775f8194d0f9e65c46913c7be783d3d95a29333c"
+  revision = "584f3b12f43e1e55248c90e84804777009eed0a4"
 
 [solve-meta]
   analyzer-name = "dep"

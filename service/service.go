@@ -19,7 +19,6 @@ import (
 	"bufio"
 	"net"
 
-	gctx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/microdevs/missy/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -297,12 +296,14 @@ func (s *Service) makeHandler(originalHandler http.Handler, pattern string, secu
 			}
 		}()
 		// build context
-		gctx.Set(r, PrometheusInstance, s.Prometheus)
-		gctx.Set(r, RouterInstance, s.Router)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, PrometheusInstance, s.Prometheus)
+		ctx = context.WithValue(ctx, RouterInstance, s.Router)
+		r = r.WithContext(ctx)
 		// call custom handler
-		chain := NewChain(StartTimerHandler).Final(FinalHandler(pattern)).Then(originalHandler)
+		chain := NewChain(StartTimerHandler, FinalHandler(pattern)).Then(originalHandler)
 		if secure {
-			chain = NewChain(StartTimerHandler, AuthHandler).Final(FinalHandler(pattern)).Then(originalHandler)
+			chain = NewChain(StartTimerHandler, AuthHandler, FinalHandler(pattern)).Then(originalHandler)
 		}
 		chain.ServeHTTP(w, r)
 	})
