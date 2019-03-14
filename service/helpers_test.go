@@ -23,34 +23,32 @@ func TestVars(t *testing.T) {
 func TestTokenHasAccess(t *testing.T) {
 	tests := []struct {
 		Token          *jwt.Token
-		Context        string
 		Policy         string
 		ExpectedResult bool
 	}{
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy1", true},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy2", true},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "other", "policy1", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "default", "policy4", false},
-		{&jwt.Token{Claims: jwt.StandardClaims{}}, "default", "policy1", false},
-		{nil, "default", "policy1", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": "not a map"}}, "default", "policy1", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"1", "2", "3"}}}}, "default", "policy1", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{1, true, 0.283, "foo"}}}}, "default", "policy1", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{1, true, 0.283, "foo"}}}}, "", "policy1", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{}}}, "", "", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "", true},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", "policy", false},
-		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{"policy"}}}}, "ctx", "policy", true},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "policy1", true},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "policy2", true},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy2", "policy3"}}}}, "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"policy1", "policy2", "policy3"}}}}, "policy4", false},
+		{&jwt.Token{Claims: jwt.StandardClaims{}}, "policy1", false},
+		{nil, "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": "not a map"}}, "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{"1", "2", "3"}}}}, "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"default": []interface{}{1, true, 0.283, "foo"}}}}, "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{1, true, 0.283, "foo"}}}}, "policy1", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{}}}, "", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "", true},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{""}}}}, "policy", false},
+		{&jwt.Token{Claims: jwt.MapClaims{"policies": map[string]interface{}{"": []interface{}{"policy"}}}}, "policy", true},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		r := httptest.NewRequest(http.MethodGet, "/foo", strings.NewReader("foobar"))
-		r.Header.Set("context", test.Context)
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, ctxToken, test.Token)
 		r = r.WithContext(ctx)
 		result := TokenHasAccess(r, test.Policy)
 		if result != test.ExpectedResult {
-			t.Logf("Result should be %t but was %t", test.ExpectedResult, result)
+			t.Logf("%d Result should be %t but was %t", i, test.ExpectedResult, result)
 			t.Fail()
 		}
 	}
