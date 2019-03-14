@@ -73,25 +73,16 @@ func TokenHasAccess(r *http.Request, policy string) bool {
 			return false
 		}
 	}
-	// get header context for policy checks
-	// if no context, will be empty sting
-	ctx := r.Header.Get("context")
-
-	policies := tokenPolicies[ctx]
-	// append empty context policies
-	if ctx != "" && len(tokenPolicies[""]) > 0 {
-		policies = append(policies, tokenPolicies[""]...)
-	}
-
-	for _, p := range policies {
-		ps, ok := p.(string)
-		// if policy cannot asserted to type string we silently skip this entry
-		if !ok {
-			log.Warnf("Invalid token format: Policy is not of type string but %s", reflect.TypeOf(p).String())
-			continue
-		}
-		if ps == policy {
-			return true
+	for _, policies := range tokenPolicies {
+		for _, p := range policies {
+			ps, ok := p.(string)
+			if !ok {
+				log.Warnf("Invalid token format: Policy is not of type string but %s", reflect.TypeOf(p).String())
+				continue
+			}
+			if ps == policy {
+				return true
+			}
 		}
 	}
 	// if the requested policy was not found in the context, the function returns false
