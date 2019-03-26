@@ -3,8 +3,9 @@ package messaging
 import (
 	"context"
 	"errors"
-	"github.com/microdevs/missy/service"
 	"io"
+
+	"github.com/microdevs/missy/service"
 
 	"strconv"
 	"time"
@@ -31,8 +32,8 @@ type BrokerReader interface {
 	io.Closer
 }
 
-// missyReader used as a default missy Reader implementation
-type missyReader struct {
+// KafkaReader used as a default missy Reader implementation
+type KafkaReader struct {
 	brokers         []string
 	groupID         string
 	topic           string
@@ -90,7 +91,7 @@ func (rm *readBroker) Close() error {
 
 // NewReader based on brokers hosts, consumerGroup and topic. You need to close it after use. (Close())
 // we are leaving using the missy config for now, because we don't know how we want to configure this yet.
-func NewReader(brokers []string, groupID string, topic string) Reader {
+func NewReader(brokers []string, groupID string, topic string) *KafkaReader {
 
 	kafkaReader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:        brokers,
@@ -99,13 +100,14 @@ func NewReader(brokers []string, groupID string, topic string) Reader {
 		CommitInterval: 0,    // 0 indicates that commits should be done synchronically
 		MinBytes:       10e3, // 10KB do we want it from config?
 		MaxBytes:       10e6, // 10MB do we want it from config?
+		RetentionTime:  retentionDuration(),
 	})
 
 	retries, intervalTime := fetchRetriesAndInterval()
 
 	log.Infof("Configured num of maxRetries: %v with interval %v", retries, intervalTime)
 
-	return &missyReader{brokers: brokers,
+	return &KafkaReader{brokers: brokers,
 		groupID:         groupID,
 		topic:           topic,
 		brokerReader:    &readBroker{kafkaReader},
@@ -115,38 +117,18 @@ func NewReader(brokers []string, groupID string, topic string) Reader {
 }
 
 // NewReaderWithDLQ a reader with DLQ
-func NewReaderWithDLQ(brokers []string, groupID string, topic string, dlqTopic string) Reader {
-	kafkaReader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:        brokers,
-		GroupID:        groupID,
-		Topic:          topic,
-		CommitInterval: 0,    // 0 indicates that commits should be done synchronically
-		MinBytes:       10e3, // 10KB do we want it from config?
-		MaxBytes:       10e6, // 10MB do we want it from config?
-	})
-
-	retries, intervalTime := fetchRetriesAndInterval()
-	log.Infof("Configured num of maxRetries: %v with interval %v", retries, intervalTime)
-
+func NewReaderWithDLQ(brokers []string, groupID string, topic string, dlqTopic string) *KafkaReader {
+	reader := NewReader(brokers, groupID, topic)
 	if dlqTopic == "" {
 		dlqTopic = topic + ".dlq"
 		log.Debugf("Setting default dlq topic name because none was passed")
 	}
-
-	log.Infof("Configured %s as topic name for dead letter queue for topic %s", dlqTopic, topic)
-
-	return &missyReader{brokers: brokers,
-		groupID:         groupID,
-		topic:           topic,
-		brokerReader:    &readBroker{kafkaReader},
-		dlqWriter:       NewWriter(brokers, dlqTopic),
-		maxRetries:      retries,
-		retriesInterval: intervalTime,
-	}
+	reader.dlqWriter = NewWriter(brokers, dlqTopic)
+	return reader
 }
 
 // Read start reading goroutine that calls msgFunc on new message, you need to close it after use
-func (mr *missyReader) Read(msgFunc ReadMessageFunc) error {
+func (mr *KafkaReader) Read(msgFunc ReadMessageFunc) error {
 	// we've got a read function on this reader, return error
 	if mr.readFunc != nil {
 		return errors.New("this reader is currently reading from underlying broker")
@@ -186,7 +168,7 @@ func (mr *missyReader) Read(msgFunc ReadMessageFunc) error {
 
 	return nil
 }
-func (mr *missyReader) commit(ctx context.Context, m Message) {
+func (mr *KafkaReader) commit(ctx context.Context, m Message) {
 	if err := mr.brokerReader.CommitMessages(ctx, m); err != nil {
 		// should we do something else to just logging not committed message?
 		log.Errorf("cannot commit message [%s] %v/%v: %s = %s; with error: %v", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value), err)
@@ -194,7 +176,7 @@ func (mr *missyReader) commit(ctx context.Context, m Message) {
 }
 
 //will try to process same message for configured number of times
-func (mr *missyReader) processMessage(msgFunc ReadMessageFunc, message Message, retryNumber int) error {
+func (mr *KafkaReader) processMessage(msgFunc ReadMessageFunc, message Message, retryNumber int) error {
 
 	if retryNumber > mr.maxRetries {
 		return errors.New("reached maximum number of retries")
@@ -208,21 +190,29 @@ func (mr *missyReader) processMessage(msgFunc ReadMessageFunc, message Message, 
 }
 
 // Close used to close underlying connection with broker
-func (mr *missyReader) Close() error {
+func (mr *KafkaReader) Close() error {
 	return mr.brokerReader.Close()
 }
 
 func fetchRetriesAndInterval() (int, time.Duration) {
-	retries, err := strconv.Atoi(service.Config().Get("kafka.retries.max.number"))
+	retries, err := strconv.Atoi(service.Config().Get(kafkaRetriesMaxNumber))
 	if retries <= 0 || err != nil {
-		log.Debug("Setting number of retries to 3, as kafka.retries.max.number not an int value")
+		log.Debugf("Setting number of retries to %v, as kafka.retries.max.number not an int value", defaultKafkaMaxRetries)
 		retries = defaultKafkaMaxRetries
 	}
-	var intervalTime time.Duration
-	interval, err := strconv.Atoi(service.Config().Get("kafka.retries.interval.ms"))
+	interval, err := time.ParseDuration(service.Config().Get(kafkaRetriesInterval))
 	if interval <= 0 || err != nil {
-		log.Debug("Setting retries interval to 5000 ms, as kafka.retries.interval.ms was not an int value")
-		intervalTime = defaultKafkaRetriesIntervalMS * time.Millisecond
+		log.Debugf("Setting retries interval to %s, as kafka.retries.interval.ms was not an int value", defaultKafkaRetriesInterval)
+		interval = defaultKafkaRetriesInterval
 	}
-	return retries, intervalTime
+	return retries, interval
+}
+
+func retentionDuration() time.Duration {
+	dur, err := time.ParseDuration(service.Config().Get(kafkaRetentionTime))
+	if err != nil {
+		log.Debugf("setting default retention time for consumer to %s", defaultKafkaRetentionTime.String())
+		dur = defaultKafkaRetentionTime
+	}
+	return dur
 }
