@@ -40,7 +40,7 @@ func TestReader_ReadSuccess(t *testing.T) {
 	brokerReaderMock.EXPECT().CommitMessages(gomock.Any(), *msg).AnyTimes().Return(nil)
 	brokerReaderMock.EXPECT().Close().Return(nil)
 
-	reader := missyReader{brokerReader: brokerReaderMock}
+	reader := KafkaReader{brokerReader: brokerReaderMock}
 
 	readFunc := func(msg Message) error {
 		if msg.Topic != "test" {
@@ -84,7 +84,7 @@ func TestReader_ReadErrorOnFetch(t *testing.T) {
 	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).AnyTimes().Return(*msg, errors.New("ferch error"))
 	brokerReaderMock.EXPECT().Close().Return(nil)
 
-	reader := missyReader{brokerReader: brokerReaderMock, maxRetries: 1}
+	reader := KafkaReader{brokerReader: brokerReaderMock, maxRetries: 1}
 
 	readFunc := func(msg Message) error {
 		return nil
@@ -107,7 +107,7 @@ func TestMissyReader_ReadErrorOnCommit(t *testing.T) {
 	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).AnyTimes().Return(*msg, nil)
 	brokerReaderMock.EXPECT().CommitMessages(gomock.Any(), *msg).AnyTimes().Return(errors.New("error"))
 
-	reader := missyReader{brokerReader: brokerReaderMock}
+	reader := KafkaReader{brokerReader: brokerReaderMock}
 
 	readFunc := func(msg Message) error {
 		if msg.Topic != "test" {
@@ -149,7 +149,7 @@ func TestMissyReader_ReadErrorOnReadFuncShouldWriteToDLQAndCommitMsg(t *testing.
 	dlqWriterMock := NewMockWriter(mockCtrl)
 	dlqWriterMock.EXPECT().Write(key, value).MinTimes(1).Return(nil)
 	brokerReaderMock.EXPECT().CommitMessages(gomock.Any(), gomock.Any()).AnyTimes()
-	reader := missyReader{brokerReader: brokerReaderMock, maxRetries: 1, dlqWriter: dlqWriterMock}
+	reader := KafkaReader{brokerReader: brokerReaderMock, maxRetries: 1, dlqWriter: dlqWriterMock}
 
 	readFunc := func(msg Message) error {
 		return errors.New("error")
@@ -170,7 +170,7 @@ func TestMissyReader_Close(t *testing.T) {
 	brokerReaderMock := NewMockBrokerReader(mockCtrl)
 	brokerReaderMock.EXPECT().Close().Return(nil)
 
-	reader := missyReader{brokerReader: brokerReaderMock}
+	reader := KafkaReader{brokerReader: brokerReaderMock}
 
 	err := reader.Close()
 
@@ -497,7 +497,7 @@ func TestReadBroker_FailingMessageShouldBeSendToDLQ(t *testing.T) {
 	msg := &Message{Topic: "test", Key: key, Value: value, Partition: 0, Offset: 0}
 	brokerReaderMock.EXPECT().CommitMessages(gomock.Any(), *msg).AnyTimes().Return(nil)
 	brokerReaderMock.EXPECT().FetchMessage(gomock.Any()).AnyTimes().Return(*msg, nil)
-	reader := &missyReader{brokerReader: brokerReaderMock, dlqWriter: dlqWriterMock, retriesInterval: 1 * time.Second, maxRetries: 1}
+	reader := &KafkaReader{brokerReader: brokerReaderMock, dlqWriter: dlqWriterMock, retriesInterval: 1 * time.Second, maxRetries: 1}
 	readFunc := func(msg Message) error {
 		return errors.New("error")
 	}
