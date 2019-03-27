@@ -48,7 +48,7 @@ func TestInfoEndpoint(t *testing.T) {
 	r := httptest.NewRequest("GET", "http://missy/info", nil)
 	// Test /info endpoint
 	s := New("test")
-	s.Router.ServeHTTP(w, r)
+	s.MetricsRouter.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
 		t.Errorf("Error calling /info endpoint")
 	}
@@ -69,7 +69,7 @@ func TestHealthEndpoint(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "http://missy/health", nil)
 	s := New("test")
-	s.Router.ServeHTTP(w, r)
+	s.MetricsRouter.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
 		t.Errorf("Error calling /info endpoint")
 	}
@@ -87,7 +87,7 @@ func TestPrometheusEndpoint(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "http://missy/metrics", nil)
 	s := New("test")
-	s.Router.ServeHTTP(w, r)
+	s.MetricsRouter.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
 		t.Errorf("Error calling /info endpoint")
 	}
