@@ -182,7 +182,7 @@ func (mr *KafkaReader) processMessage(msgFunc ReadMessageFunc, message Message, 
 		return errors.New("reached maximum number of retries")
 	}
 	if err := msgFunc(message); err != nil {
-		log.Errorf("# messaging # retry number %v failed, trying again", retryNumber)
+		log.Errorf("# messaging # retry number %v failed, trying again, err: %v", retryNumber, err)
 		time.Sleep(mr.retriesInterval)
 		return mr.processMessage(msgFunc, message, retryNumber+1)
 	}
