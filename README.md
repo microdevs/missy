@@ -78,14 +78,14 @@ func JsonHandler(w http.ResponseWriter, r *http.Request) {
 curl "http://localhost:8088/hello/microdevs"
 ```
 
-Get Prometheus Metrics:
+Get Prometheus Metrics (all metrics are exposed on 8090 as default). To change this please set `METRICS_LISTEN_PORT` env. var.:
 ```
-curl http://localhost:8088/metrics
+curl http://localhost:8090/metrics
 ```
 
 ### Get Info:
 ```
-http://localhost:8088/info
+http://localhost:8090/info
 ```
 
 Response:
@@ -95,7 +95,7 @@ Uptime 14.504883092s
 ```
 ### Get Health:
 ```
-http://localhost:8088/health
+http://localhost:8090/health
 ```
 
 Response:
