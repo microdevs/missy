@@ -180,7 +180,13 @@ func (s *Service) Start() {
 		for {
 			select {
 			case err := <-errChan:
-				log.Fatalf("server shut down due to %v", err)
+				logFunc := log.Fatalf
+				// if server is closed, it's not a fatal but info
+				// it means that there was a call to Shutdown or Close
+				if err == http.ErrServerClosed {
+					logFunc = log.Infof
+				}
+				logFunc("server shut down due to %v", err)
 			}
 		}
 	}()
