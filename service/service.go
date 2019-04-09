@@ -57,14 +57,15 @@ const RequestTimer key = 2
 
 // Service type provides a HTTP/Rest service
 type Service struct {
-	name       string
-	Host       string
-	Port       string
-	Prometheus *PrometheusHolder
-	timer      *Timer
-	Router     *mux.Router
-	Stop       chan os.Signal
-	ServeMux   *http.ServeMux
+	name          string
+	Host          string
+	Port          string
+	MetricsPort   string
+	Prometheus    *PrometheusHolder
+	timer         *Timer
+	Router        *mux.Router
+	MetricsRouter *mux.Router
+	Stop          chan os.Signal
 
 	StateProbes struct {
 		IsHealthy bool
@@ -74,8 +75,6 @@ type Service struct {
 	}
 }
 
-var listenPort = "8080"
-var listenHost = "localhost"
 var controllerAddr string
 
 // FlagMissyControllerAddressDefault is a default for the missy-controller url used in the during service initialisation when given the init flag
@@ -83,6 +82,12 @@ const FlagMissyControllerAddressDefault = "http://missy-controller"
 
 // FlagMissyControllerUsage is a usage message for the missy-controller url used in the during service initialisation when given the init flag
 const FlagMissyControllerUsage = "The address of the MiSSy controller"
+
+const (
+	listenHost        = "service.listen.host"
+	listenPort        = "service.listen.port"
+	metricsListenPort = "service.metrics.listen.port"
+)
 
 // init checks for init flag and executes the service registration with the missy controller if applicable
 func init() {
@@ -108,9 +113,11 @@ func init() {
 		os.Exit(0)
 	}
 	//todo: refactor this to LISTEN_ADDRESS
-	Config().RegisterOptionalParameter("LISTEN_HOST", "0.0.0.0", "service.listen.host", "The address the service listens on")
-	Config().RegisterOptionalParameter("LISTEN_PORT", "8080", "service.listen.port", "The port the service listens on")
-	Config().Parse()
+	config := Config()
+	config.RegisterOptionalParameter("LISTEN_HOST", "0.0.0.0", listenHost, "The address the service listens on")
+	config.RegisterOptionalParameter("LISTEN_PORT", "8080", listenPort, "The port the service listens on")
+	config.RegisterOptionalParameter("METRICS_LISTEN_PORT", "8090", metricsListenPort, "The port the service metrics listens on")
+	config.Parse()
 }
 
 // New returns a new Service object
@@ -120,15 +127,17 @@ func New(name string) *Service {
 	if len(name) < 1 {
 		log.Fatal("Unnamed services are not allowed, passed an empty string as name")
 	}
-	Config().Name = name
+	config := Config()
+	config.Name = name
 
 	s := &Service{
-		name:       name,
-		Host:       Config().Get("service.listen.host"),
-		Port:       Config().Get("service.listen.port"),
-		Prometheus: NewPrometheus(name),
-		Router:     mux.NewRouter(),
-		ServeMux:   http.NewServeMux(),
+		name:          name,
+		Host:          config.Get(listenHost),
+		Port:          config.Get(listenPort),
+		MetricsPort:   config.Get(metricsListenPort),
+		Prometheus:    NewPrometheus(name),
+		Router:        mux.NewRouter(),
+		MetricsRouter: mux.NewRouter(),
 	}
 
 	s.StateProbes.IsHealthy = true
@@ -141,25 +150,39 @@ func New(name string) *Service {
 // Start starts the http server
 func (s *Service) Start() {
 	// start the server
-	log.Infof("Starting service %s listening on %s:%s ...", s.name, s.Host, s.Port)
-	// set host and port to listen to
+	log.Infof("Starting service %s", s.name)
+	log.Infof("listening on %s:%s ...", s.Host, s.Port)
+	log.Infof("listening for metrics on %s:%s ...", s.Host, s.MetricsPort)
+	// set service host and port to listen to
 	listen := s.Host + ":" + s.Port
 	h := &http.Server{Addr: listen, Handler: s.Router}
+	// set service metrics host and port to listen to
+	metricsListen := s.Host + ":" + s.MetricsPort
+	m := &http.Server{Addr: metricsListen, Handler: s.MetricsRouter}
 	// run server in background
 	go func() {
 		certFile, keyFile, useTLS := prepareTLS()
 
-		var err error
+		errChan := make(chan error, 1)
 		if useTLS {
-			err = h.ListenAndServeTLS(certFile, keyFile)
+			// listen for main service with TLS
+			go listenAndServeTLS(h, certFile, keyFile, errChan)
+			// listen for service metrics with TLS
+			go listenAndServeTLS(m, certFile, keyFile, errChan)
 		} else {
 			log.Warnf("WARNING! This server starts without transport layer security (TLS) to use it set TLS_CERTFILE and TLS_KEYFILE in environment")
-			err = h.ListenAndServe()
+			// listen for main service without TLS
+			go listenAndServe(h, errChan)
+			// listen for service metrics without TLS
+			go listenAndServe(m, errChan)
 		}
-		if err != nil {
-			log.Fatalf("Error starting Service due to %v", err)
+
+		for {
+			select {
+			case err := <-errChan:
+				log.Fatalf("server shut down due to %v", err)
+			}
 		}
-		log.Debugf("server shut down")
 	}()
 	s.prepareShutdown(h)
 }
@@ -174,6 +197,20 @@ func (s *Service) prepareShutdown(h Server) {
 // Shutdown allows to stop the HTTP Server gracefully
 func (s *Service) Shutdown() {
 	s.Stop <- os.Signal(os.Interrupt)
+}
+
+func listenAndServeTLS(server *http.Server, certFile, keyFile string, errChan chan error) {
+	if err := server.ListenAndServeTLS(certFile, keyFile); err != nil {
+		errChan <- err
+		return
+	}
+}
+
+func listenAndServe(server *http.Server, errChan chan error) {
+	if err := server.ListenAndServe(); err != nil {
+		errChan <- err
+		return
+	}
 }
 
 func shutdown(s Shutdowner) {
@@ -238,13 +275,10 @@ func shutdown(s Shutdowner) {
 // prepareBeforeStart sets up the standard handlers
 func (s *Service) prepareBeforeStart() {
 	s.timer = NewTimer()
-	s.Router.Handle("/metrics", promhttp.Handler()).Methods("GET")
-	s.Router.HandleFunc("/health", s.healthHandler).Methods("GET")
-	s.Router.HandleFunc("/ready", s.readinessHandler).Methods("GET")
-	s.Router.HandleFunc("/info", s.infoHandler).Methods("GET")
-
-	s.ServeMux.Handle("/", s.Router)
-
+	s.MetricsRouter.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
+	s.MetricsRouter.HandleFunc("/health", s.healthHandler).Methods(http.MethodGet)
+	s.MetricsRouter.HandleFunc("/ready", s.readinessHandler).Methods(http.MethodGet)
+	s.MetricsRouter.HandleFunc("/info", s.infoHandler).Methods(http.MethodGet)
 }
 
 // HandleFunc excepts a HanderFunc an converts it to a handler, then registers this handler
