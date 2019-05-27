@@ -190,14 +190,17 @@ func (s *Service) Start() {
 			}
 		}
 	}()
-	s.prepareShutdown(h)
+	s.prepareShutdown(h, m)
 }
 
-func (s *Service) prepareShutdown(h Server) {
+func (s *Service) prepareShutdown(h Server, m Server) {
 	signal.Notify(s.Stop, os.Interrupt, syscall.SIGTERM)
 	<-s.Stop
 	s.StatusNotReady()
+	// shutdown main service
 	shutdown(h)
+	// shutdown metrics service
+	shutdown(m)
 }
 
 // Shutdown allows to stop the HTTP Server gracefully
