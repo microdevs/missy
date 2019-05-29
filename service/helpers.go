@@ -113,7 +113,7 @@ func IsSignedTokenValid(signedToken string) bool {
 	})
 
 	if err != nil {
-		log.Warnf("cannot pars jwt token: %v", err)
+		log.Warnf("Cannot parse jwt token: %v", err)
 		return false
 	}
 

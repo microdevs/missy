@@ -171,7 +171,7 @@ func (mr *KafkaReader) Read(msgFunc ReadMessageFunc) error {
 func (mr *KafkaReader) commit(ctx context.Context, m Message) {
 	if err := mr.brokerReader.CommitMessages(ctx, m); err != nil {
 		// should we do something else to just logging not committed message?
-		log.Errorf("cannot commit message [%s] %v/%v: %s = %s; with error: %v", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value), err)
+		log.Errorf("Cannot commit message [%s] %v/%v: %s = %s; with error: %v", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value), err)
 	}
 }
 
@@ -211,7 +211,7 @@ func fetchRetriesAndInterval() (int, time.Duration) {
 func retentionDuration() time.Duration {
 	dur, err := time.ParseDuration(service.Config().Get(kafkaRetentionTime))
 	if err != nil {
-		log.Debugf("setting default retention time for consumer to %s", defaultKafkaRetentionTime.String())
+		log.Debugf("Setting default retention time for consumer to %s", defaultKafkaRetentionTime.String())
 		dur = defaultKafkaRetentionTime
 	}
 	return dur

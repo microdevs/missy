@@ -74,7 +74,7 @@ func AuthHandler(h http.Handler) http.Handler {
 			return pubkey, nil
 		})
 		if err != nil {
-			log.Warnf("invalid token: %v", err)
+			log.Warnf("Invalid token: %v", err)
 			http.Error(w, "Unauthorized", http.StatusForbidden)
 			return
 		}

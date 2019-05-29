@@ -151,8 +151,8 @@ func New(name string) *Service {
 func (s *Service) Start() {
 	// start the server
 	log.Infof("Starting service %s", s.name)
-	log.Infof("listening on %s:%s ...", s.Host, s.Port)
-	log.Infof("listening for metrics on %s:%s ...", s.Host, s.MetricsPort)
+	log.Infof("Listening on %s:%s ...", s.Host, s.Port)
+	log.Infof("Listening for metrics on %s:%s ...", s.Host, s.MetricsPort)
 	// set service host and port to listen to
 	listen := s.Host + ":" + s.Port
 	h := &http.Server{Addr: listen, Handler: s.Router}
@@ -186,7 +186,7 @@ func (s *Service) Start() {
 				if err == http.ErrServerClosed {
 					logFunc = log.Infof
 				}
-				logFunc("server shut down due to %v", err)
+				logFunc("Server shut down due to %v", err)
 			}
 		}
 	}()
