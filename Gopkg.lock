@@ -42,14 +42,6 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:dbbeb8ddb0be949954c8157ee8439c2adfd8dc1c9510eb44a6e58cb68c3dce28"
-  name = "github.com/gorilla/context"
-  packages = ["."]
-  pruneopts = ""
-  revision = "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
-  version = "v1.1.1"
-
-[[projects]]
   branch = "master"
   digest = "1:1290ab3ac2dd3900a397dec83177b9e346b4a92ef8eb159e8ae2994bbcce7810"
   name = "github.com/gorilla/mux"
@@ -169,7 +161,6 @@
     "github.com/bouk/monkey",
     "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
-    "github.com/gorilla/context",
     "github.com/gorilla/mux",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
