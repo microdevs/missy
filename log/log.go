@@ -25,17 +25,16 @@ func init() {
 	}
 
 	// setting level, default debug
-	loglevel := os.Getenv("LOG_LEVEL")
+	loglevel := os.Getenv("MISSY_LOG_LEVEL")
 	if loglevel == "" {
-		loglevel = "debug"
+		loglevel = "warn"
 	}
-	level, error := l.ParseLevel(loglevel)
-	if error != nil {
+	level, err := l.ParseLevel(loglevel)
+	if err != nil {
 		Fatalf("Unknown log level %s, allowed levels: debug, info, warn, error, fatal, panic", loglevel)
 	}
 	l.SetLevel(level)
 	l.Debugf("Setting log level to %s", level.String())
-
 }
 
 // Debug logs a message at level Debug on the standard logger.
