@@ -6,7 +6,7 @@ import (
 	"testing"
 	tm "time"
 
-	"github.com/bouk/monkey"
+	"bou.ke/monkey"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/segmentio/kafka-go"

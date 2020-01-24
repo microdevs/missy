@@ -2,20 +2,20 @@
 
 
 [[projects]]
+  digest = "1:a6ee710e45210bafe11f2f28963571be2ac8809f9a7b675a6d2c02302a1ce1a9"
+  name = "bou.ke/monkey"
+  packages = ["."]
+  pruneopts = ""
+  revision = "5df1f207ff77e025801505ae4d903133a0b4353f"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:c0bec5f9b98d0bc872ff5e834fac186b807b656683bd29cb82fb207a1513fabb"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   pruneopts = ""
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
-
-[[projects]]
-  digest = "1:a6ee710e45210bafe11f2f28963571be2ac8809f9a7b675a6d2c02302a1ce1a9"
-  name = "github.com/bouk/monkey"
-  packages = ["."]
-  pruneopts = ""
-  revision = "5df1f207ff77e025801505ae4d903133a0b4353f"
-  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -158,7 +158,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/bouk/monkey",
+    "bou.ke/monkey",
     "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
     "github.com/gorilla/mux",
