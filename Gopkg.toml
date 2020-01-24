@@ -43,7 +43,7 @@
   #version = "1.2.0"
 
 [[constraint]]
-  name = "github.com/bouk/monkey"
+  name = "bou.ke/monkey"
   version = "1.0.0"
 
 [[constraint]]
