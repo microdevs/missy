@@ -3,9 +3,10 @@ package messaging
 import (
 	"context"
 	"fmt"
-	"github.com/microdevs/missy/service"
 	"testing"
 	"time"
+
+	"github.com/microdevs/missy/service"
 
 	"reflect"
 
@@ -198,7 +199,7 @@ func TestReadBroker_FetchMessage(t *testing.T) {
 
 	defer monkey.Unpatch(kr.FetchMessage)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 0, 0}
 
 	msg, err := rb.FetchMessage(context.Background())
 
@@ -256,7 +257,7 @@ func TestReadBroker_FetchMessage_Error(t *testing.T) {
 
 	defer monkey.Unpatch(kr.FetchMessage)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 1, 1}
 
 	_, err := rb.FetchMessage(context.Background())
 
@@ -287,7 +288,7 @@ func TestReadBroker_ReadMessage(t *testing.T) {
 
 	defer monkey.Unpatch(kr.ReadMessage)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 0, 0}
 
 	msg, err := rb.ReadMessage(context.Background())
 
@@ -334,7 +335,7 @@ func TestReadBroker_ReadMessage_Error(t *testing.T) {
 
 	defer monkey.Unpatch(kr.ReadMessage)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 0, 0}
 
 	_, err := rb.ReadMessage(context.Background())
 
@@ -371,7 +372,7 @@ func TestReadBroker_CommitMessages(t *testing.T) {
 
 	defer monkey.Unpatch(kr.CommitMessages)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 0, 0}
 
 	err := rb.CommitMessages(context.Background(), messages...)
 
@@ -409,7 +410,7 @@ func TestReadBroker_CommitMessages_Error(t *testing.T) {
 
 	defer monkey.Unpatch(kr.CommitMessages)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 0, 0}
 
 	err := rb.CommitMessages(context.Background(), messages...)
 
@@ -441,7 +442,7 @@ func TestReadBroker_Close(t *testing.T) {
 
 	defer monkey.Unpatch(kr.Close)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 0, 0}
 
 	err := rb.Close()
 
@@ -473,7 +474,7 @@ func TestReadBroker_Close_Error(t *testing.T) {
 
 	defer monkey.Unpatch(kr.Close)
 
-	rb := readBroker{kr}
+	rb := readBroker{kr, 0, 0}
 
 	err := rb.Close()
 
