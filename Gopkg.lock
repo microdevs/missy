@@ -120,12 +120,15 @@
   revision = "d0f344d83b0c80a1bc03b547a2374a9ec6711144"
 
 [[projects]]
-  branch = "master"
-  digest = "1:9a8f2c389df904f93a80eebbeb8c987a983cdfaa4fb49670f0953e9676e0ab34"
+  digest = "1:062271a79f74f66c1b1778d69e4914074adcf9e2501c14bb11ef814df6a89a70"
   name = "github.com/segmentio/kafka-go"
-  packages = ["."]
+  packages = [
+    ".",
+    "sasl",
+  ]
   pruneopts = ""
-  revision = "d19f52f08673027cb346c63eb317b8e644b101af"
+  revision = "9a956db8bd00245835f16007fbfe8ec58b31b8b9"
+  version = "v0.3.5"
 
 [[projects]]
   branch = "master"

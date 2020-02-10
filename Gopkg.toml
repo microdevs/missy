@@ -34,7 +34,7 @@
   name = "github.com/sirupsen/logrus"
 
 [[constraint]]
-  branch = "master"
+  version = "0.3.5"
   name = "github.com/segmentio/kafka-go"
 
 [[constraint]]
