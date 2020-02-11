@@ -47,11 +47,26 @@ type KafkaReader struct {
 // readBroker us as a wrapper for kafka.Reader implementation to fulfill BrokerReader interface
 type readBroker struct {
 	*kafka.Reader
+	maxRetries      int
+	retriesInterval time.Duration
 }
 
 // FetchMessages used to fetch messages from the broker
 func (rm *readBroker) FetchMessage(ctx context.Context) (Message, error) {
-	m, err := rm.Reader.FetchMessage(ctx)
+	var err error
+	var m kafka.Message
+	var retryNumber = 0
+
+	for retryNumber <= rm.maxRetries {
+		m, err = rm.Reader.FetchMessage(ctx)
+		if err != nil {
+			retryNumber = retryNumber + 1
+			log.Errorf("# messaging # retry number %v failed, trying again, err: %v", retryNumber, err)
+			time.Sleep(rm.retriesInterval)
+			continue
+		}
+		break
+	}
 
 	if err != nil {
 		return Message{}, err
@@ -110,7 +125,7 @@ func NewReader(brokers []string, groupID string, topic string) *KafkaReader {
 	return &KafkaReader{brokers: brokers,
 		groupID:         groupID,
 		topic:           topic,
-		brokerReader:    &readBroker{kafkaReader},
+		brokerReader:    &readBroker{kafkaReader, retries, intervalTime},
 		maxRetries:      retries,
 		retriesInterval: intervalTime,
 	}
